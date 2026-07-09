@@ -27,7 +27,7 @@ function Home() {
               params={{ slug: exemploSlug }}
               className="inline-flex h-12 items-center justify-between gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-sm transition hover:bg-primary-hover"
             >
-              Cadastro de exemplo
+              Iniciar cadastro
               <ArrowRight className="h-4 w-4" />
             </Link>
             <Link
@@ -39,7 +39,7 @@ function Home() {
             </Link>
           </div>
         </div>
-        <p className="mt-4 text-center text-xs text-muted-foreground">
+        <p className="mt-4 text-center text-[11px] text-muted-foreground/70">
           Uso interno · Equipe de campanha
         </p>
       </div>
