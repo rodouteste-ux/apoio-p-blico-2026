@@ -9,38 +9,137 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as ObrigadoRouteImport } from './routes/obrigado'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AdminIndexRouteImport } from './routes/admin.index'
+import { Route as CadastroSlugRouteImport } from './routes/cadastro.$slug'
+import { Route as AdminCadastrosRouteImport } from './routes/admin.cadastros'
 
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ObrigadoRoute = ObrigadoRouteImport.update({
+  id: '/obrigado',
+  path: '/obrigado',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminIndexRoute = AdminIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const CadastroSlugRoute = CadastroSlugRouteImport.update({
+  id: '/cadastro/$slug',
+  path: '/cadastro/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminCadastrosRoute = AdminCadastrosRouteImport.update({
+  id: '/cadastros',
+  path: '/cadastros',
+  getParentRoute: () => AdminRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRouteWithChildren
+  '/obrigado': typeof ObrigadoRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/admin/cadastros': typeof AdminCadastrosRoute
+  '/cadastro/$slug': typeof CadastroSlugRoute
+  '/admin/': typeof AdminIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/obrigado': typeof ObrigadoRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/admin/cadastros': typeof AdminCadastrosRoute
+  '/cadastro/$slug': typeof CadastroSlugRoute
+  '/admin': typeof AdminIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/admin': typeof AdminRouteWithChildren
+  '/obrigado': typeof ObrigadoRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/admin/cadastros': typeof AdminCadastrosRoute
+  '/cadastro/$slug': typeof CadastroSlugRoute
+  '/admin/': typeof AdminIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/admin'
+    | '/obrigado'
+    | '/sitemap.xml'
+    | '/admin/cadastros'
+    | '/cadastro/$slug'
+    | '/admin/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/obrigado'
+    | '/sitemap.xml'
+    | '/admin/cadastros'
+    | '/cadastro/$slug'
+    | '/admin'
+  id:
+    | '__root__'
+    | '/'
+    | '/admin'
+    | '/obrigado'
+    | '/sitemap.xml'
+    | '/admin/cadastros'
+    | '/cadastro/$slug'
+    | '/admin/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdminRoute: typeof AdminRouteWithChildren
+  ObrigadoRoute: typeof ObrigadoRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  CadastroSlugRoute: typeof CadastroSlugRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/obrigado': {
+      id: '/obrigado'
+      path: '/obrigado'
+      fullPath: '/obrigado'
+      preLoaderRoute: typeof ObrigadoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,22 +147,49 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/': {
+      id: '/admin/'
+      path: '/'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/cadastro/$slug': {
+      id: '/cadastro/$slug'
+      path: '/cadastro/$slug'
+      fullPath: '/cadastro/$slug'
+      preLoaderRoute: typeof CadastroSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/cadastros': {
+      id: '/admin/cadastros'
+      path: '/cadastros'
+      fullPath: '/admin/cadastros'
+      preLoaderRoute: typeof AdminCadastrosRouteImport
+      parentRoute: typeof AdminRoute
+    }
   }
 }
 
+interface AdminRouteChildren {
+  AdminCadastrosRoute: typeof AdminCadastrosRoute
+  AdminIndexRoute: typeof AdminIndexRoute
+}
+
+const AdminRouteChildren: AdminRouteChildren = {
+  AdminCadastrosRoute: AdminCadastrosRoute,
+  AdminIndexRoute: AdminIndexRoute,
+}
+
+const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdminRoute: AdminRouteWithChildren,
+  ObrigadoRoute: ObrigadoRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
+  CadastroSlugRoute: CadastroSlugRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
