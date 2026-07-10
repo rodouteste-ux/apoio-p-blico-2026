@@ -1,47 +1,92 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Users, TrendingUp, MapPin, ThumbsUp, UserCheck } from "lucide-react";
+import { MapPin, ThumbsUp, TrendingUp, UserCheck, Users } from "lucide-react";
+import { useEffect, useState } from "react";
 
-import { AppLayout } from "@/components/layout/AppLayout";
 import { AdminHeader } from "@/components/admin/AdminHeader";
-import { MetricCard } from "@/components/admin/MetricCard";
 import { ApoiosChart } from "@/components/admin/ApoiosChart";
-import { CadastrosTable } from "@/components/admin/CadastrosTable";
 import { CadastroMobileCard } from "@/components/admin/CadastroMobileCard";
-import { cadastrosMock } from "@/data/cadastrosMock";
-import { responsaveis } from "@/data/responsaveis";
+import { CadastrosTable } from "@/components/admin/CadastrosTable";
+import { MetricCard } from "@/components/admin/MetricCard";
+import { AppLayout } from "@/components/layout/AppLayout";
+import { buscarDashboard } from "@/services/cadastroService";
+import type { DashboardMetric } from "@/types/cadastro";
 
 export const Route = createFileRoute("/admin/")({
   component: AdminDashboard,
 });
 
 function AdminDashboard() {
-  const total = cadastrosMock.length;
-  const hoje = 0;
-  const cidades = new Set(cadastrosMock.map((c) => c.cidade)).size;
-  const apoios = cadastrosMock.reduce((sum, c) => sum + c.preCandidatos.length, 0);
-  const responsaveisAtivos = responsaveis.filter((r) => r.ativo).length;
+  const [dashboard, setDashboard] = useState<DashboardMetric | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const ultimos = cadastrosMock.slice(0, 5);
+  useEffect(() => {
+    let active = true;
+
+    async function loadDashboard() {
+      setError(null);
+
+      try {
+        const data = await buscarDashboard();
+        if (!active) return;
+        setDashboard(data);
+      } catch {
+        if (!active) return;
+        setError("Nao foi possivel carregar os dados do painel.");
+      }
+    }
+
+    void loadDashboard();
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   return (
     <AppLayout maxWidth="xl">
       <AdminHeader />
 
       <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5">
-        <MetricCard label="Total de cadastros" value={total} icon={Users} />
-        <MetricCard label="Cadastros hoje" value={hoje} icon={TrendingUp} />
-        <MetricCard label="Cidades" value={cidades} icon={MapPin} />
-        <MetricCard label="Apoios registrados" value={apoios} icon={ThumbsUp} />
-        <MetricCard label="Responsáveis ativos" value={responsaveisAtivos} icon={UserCheck} />
+        <MetricCard
+          label="Total de cadastros"
+          value={dashboard?.totalCadastros ?? "—"}
+          icon={Users}
+        />
+        <MetricCard
+          label="Cadastros hoje"
+          value={dashboard?.cadastrosHoje ?? "—"}
+          icon={TrendingUp}
+        />
+        <MetricCard label="Cidades" value={dashboard?.totalCidades ?? "—"} icon={MapPin} />
+        <MetricCard
+          label="Apoios registrados"
+          value={dashboard?.totalApoios ?? "—"}
+          icon={ThumbsUp}
+        />
+        <MetricCard
+          label="Responsaveis ativos"
+          value={dashboard?.responsaveisAtivos ?? "—"}
+          icon={UserCheck}
+        />
       </section>
 
       <div className="mt-6">
-        <ApoiosChart />
+        {dashboard ? (
+          <ApoiosChart data={dashboard.apoiosPorPreCandidato} />
+        ) : (
+          <PanelMessage
+            title={error ? "Falha ao carregar ranking" : "Carregando ranking"}
+            description={
+              error ??
+              "Estamos preparando a distribuicao dos apoios por pre-candidato."
+            }
+          />
+        )}
       </div>
 
       <section className="mt-6 rounded-2xl border border-border bg-card p-4 sm:p-6">
         <div className="mb-4 flex items-center justify-between gap-3">
-          <h2 className="text-base font-semibold text-foreground">Últimos cadastros</h2>
+          <h2 className="text-base font-semibold text-foreground">Ultimos cadastros</h2>
           <Link
             to="/admin/cadastros"
             className="text-sm font-medium text-primary hover:text-primary-hover"
@@ -50,15 +95,44 @@ function AdminDashboard() {
           </Link>
         </div>
 
-        <div className="hidden sm:block">
-          <CadastrosTable cadastros={ultimos} compact />
-        </div>
-        <div className="grid gap-3 sm:hidden">
-          {ultimos.map((c) => (
-            <CadastroMobileCard key={c.id} cadastro={c} />
-          ))}
-        </div>
+        {!dashboard && (
+          <PanelMessage
+            title={error ? "Falha ao carregar cadastros" : "Carregando cadastros"}
+            description={
+              error ?? "Buscando os registros mais recentes para preencher o painel."
+            }
+          />
+        )}
+
+        {dashboard && dashboard.ultimosCadastros.length === 0 && (
+          <PanelMessage
+            title="Nenhum cadastro ainda"
+            description="Assim que os apoios forem enviados, eles aparecerao aqui."
+          />
+        )}
+
+        {dashboard && dashboard.ultimosCadastros.length > 0 && (
+          <>
+            <div className="hidden sm:block">
+              <CadastrosTable cadastros={dashboard.ultimosCadastros} compact />
+            </div>
+            <div className="grid gap-3 sm:hidden">
+              {dashboard.ultimosCadastros.map((cadastro) => (
+                <CadastroMobileCard key={cadastro.id} cadastro={cadastro} />
+              ))}
+            </div>
+          </>
+        )}
       </section>
     </AppLayout>
+  );
+}
+
+function PanelMessage({ title, description }: { title: string; description: string }) {
+  return (
+    <div className="rounded-2xl border border-dashed border-border bg-muted/20 p-6 text-center">
+      <p className="text-sm font-semibold text-foreground">{title}</p>
+      <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+    </div>
   );
 }

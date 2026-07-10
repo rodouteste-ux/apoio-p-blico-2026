@@ -1,16 +1,15 @@
-import { maskCPF, maskWhatsapp } from "./masks";
+import { formatPhone, maskCpf, maskCpfForAdmin, whatsappLink as buildWhatsappLink } from "@/lib/personal-data";
 
 export function formatCPFMasked(cpf: string): string {
-  const digits = cpf.replace(/\D/g, "").padEnd(11, "0").slice(0, 11);
-  return `${digits.slice(0, 3)}.***.***-${digits.slice(9, 11)}`;
+  return maskCpfForAdmin(cpf);
 }
 
 export function formatCPF(cpf: string): string {
-  return maskCPF(cpf);
+  return maskCpf(cpf);
 }
 
 export function formatWhatsapp(value: string): string {
-  return maskWhatsapp(value);
+  return formatPhone(value);
 }
 
 export function formatDate(iso: string): string {
@@ -30,6 +29,5 @@ export function formatDateTime(iso: string): string {
 }
 
 export function whatsappLink(numero: string): string {
-  const digits = numero.replace(/\D/g, "");
-  return `https://wa.me/55${digits}`;
+  return buildWhatsappLink(numero);
 }

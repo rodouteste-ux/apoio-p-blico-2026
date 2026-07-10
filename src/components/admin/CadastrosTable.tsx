@@ -1,20 +1,11 @@
-import { MessageCircle, Eye } from "lucide-react";
+import { MessageCircle } from "lucide-react";
+
 import type { Cadastro } from "@/types/cadastro";
-import { responsaveis } from "@/data/responsaveis";
-import {
-  formatCPFMasked,
-  formatDate,
-  formatWhatsapp,
-  whatsappLink,
-} from "@/utils/formatters";
+import { formatDate, whatsappLink } from "@/utils/formatters";
 
 interface CadastrosTableProps {
   cadastros: Cadastro[];
   compact?: boolean;
-}
-
-function responsavelNome(id: string) {
-  return responsaveis.find((r) => r.id === id)?.nome ?? "—";
 }
 
 export function CadastrosTable({ cadastros, compact }: CadastrosTableProps) {
@@ -27,37 +18,49 @@ export function CadastrosTable({ cadastros, compact }: CadastrosTableProps) {
             {!compact && <Th>WhatsApp</Th>}
             {!compact && <Th>CPF</Th>}
             <Th>Cidade</Th>
-            <Th>Responsável</Th>
+            {!compact && <Th>Bairro</Th>}
             <Th>Data</Th>
-            {!compact && <Th className="text-right">Ações</Th>}
+            {!compact && <Th className="text-right">Acoes</Th>}
           </tr>
         </thead>
         <tbody>
-          {cadastros.map((c) => (
-            <tr key={c.id} className="border-b border-border/70 last:border-b-0 hover:bg-muted/30">
-              <td className="px-4 py-3 font-medium text-foreground">{c.nome}</td>
-              {!compact && <td className="px-4 py-3 text-muted-foreground">{formatWhatsapp(c.whatsapp)}</td>}
-              {!compact && <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{formatCPFMasked(c.cpf)}</td>}
-              <td className="px-4 py-3 text-muted-foreground">{c.cidade}</td>
-              <td className="px-4 py-3 text-muted-foreground">{responsavelNome(c.responsavelId)}</td>
-              <td className="px-4 py-3 text-muted-foreground">{formatDate(c.criadoEm)}</td>
+          {cadastros.length === 0 && (
+            <tr>
+              <td
+                colSpan={compact ? 3 : 7}
+                className="px-4 py-8 text-center text-sm text-muted-foreground"
+              >
+                Nenhum cadastro encontrado.
+              </td>
+            </tr>
+          )}
+
+          {cadastros.map((cadastro) => (
+            <tr
+              key={cadastro.id}
+              className="border-b border-border/70 last:border-b-0 hover:bg-muted/30"
+            >
+              <td className="px-4 py-3 font-medium text-foreground">{cadastro.nomeCompleto}</td>
+              {!compact && <td className="px-4 py-3 text-muted-foreground">{cadastro.telefone}</td>}
+              {!compact && (
+                <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
+                  {cadastro.cpfMascarado}
+                </td>
+              )}
+              <td className="px-4 py-3 text-muted-foreground">{cadastro.cidade}</td>
+              {!compact && <td className="px-4 py-3 text-muted-foreground">{cadastro.bairro}</td>}
+              <td className="px-4 py-3 text-muted-foreground">{formatDate(cadastro.criadoEm)}</td>
               {!compact && (
                 <td className="px-4 py-3">
-                  <div className="flex justify-end gap-1.5">
+                  <div className="flex justify-end">
                     <a
-                      href={whatsappLink(c.whatsapp)}
+                      href={whatsappLink(cadastro.telefone)}
                       target="_blank"
                       rel="noreferrer"
                       className="grid h-8 w-8 place-items-center rounded-md border border-border text-muted-foreground transition hover:border-primary/40 hover:text-primary"
                     >
                       <MessageCircle className="h-4 w-4" />
                     </a>
-                    <button
-                      type="button"
-                      className="grid h-8 w-8 place-items-center rounded-md border border-border text-muted-foreground transition hover:border-primary/40 hover:text-primary"
-                    >
-                      <Eye className="h-4 w-4" />
-                    </button>
                   </div>
                 </td>
               )}

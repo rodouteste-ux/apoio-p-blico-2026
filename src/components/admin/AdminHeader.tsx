@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { LayoutGrid, Download } from "lucide-react";
+import { LayoutGrid } from "lucide-react";
 
 export function AdminHeader() {
   return (
@@ -13,7 +13,7 @@ export function AdminHeader() {
             Painel Administrativo
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Visão geral dos cadastros de apoio.
+            Visao geral dos cadastros de apoio.
           </p>
         </div>
         <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
@@ -24,14 +24,6 @@ export function AdminHeader() {
             <LayoutGrid className="h-4 w-4" />
             Ver cadastros
           </Link>
-          <button
-            type="button"
-            onClick={() => window.alert("Exportação mockada")}
-            className="hidden h-10 items-center justify-center gap-2 rounded-lg border border-border bg-white px-3.5 text-sm font-medium text-foreground transition hover:border-primary/40 hover:bg-accent sm:inline-flex"
-          >
-            <Download className="h-4 w-4" />
-            Exportar
-          </button>
         </div>
       </div>
     </header>

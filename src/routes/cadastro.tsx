@@ -1,0 +1,342 @@
+import { zodResolver } from "@hookform/resolvers/zod";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { Controller, useForm } from "react-hook-form";
+import { useEffect, useState } from "react";
+import { z } from "zod";
+
+import { CandidateCard } from "@/components/form/CandidateCard";
+import { FormInput } from "@/components/form/FormInput";
+import { FormSection } from "@/components/form/FormSection";
+import { FormSelect } from "@/components/form/FormSelect";
+import { FormTextarea } from "@/components/form/FormTextarea";
+import { SubmitButton } from "@/components/form/SubmitButton";
+import { AppLayout } from "@/components/layout/AppLayout";
+import { DEFAULT_RESPONSAVEL_SLUG } from "@/config/campaign";
+import { cidades } from "@/data/cidades";
+import { validateCpf } from "@/lib/personal-data";
+import {
+  buscarPreCandidatos,
+  enviarCadastro,
+  type PreCandidatoOption,
+} from "@/services/cadastroService";
+import { ApiError } from "@/services/api";
+import { maskCPF, maskWhatsapp, onlyDigits } from "@/utils/masks";
+
+export const Route = createFileRoute("/cadastro")({
+  component: CadastroPage,
+});
+
+const schema = z.object({
+  whatsapp: z
+    .string()
+    .min(1, "WhatsApp obrigatorio")
+    .refine((value) => onlyDigits(value).length >= 10, "WhatsApp invalido"),
+  nome: z.string().trim().min(3, "Nome completo obrigatorio"),
+  cpf: z
+    .string()
+    .min(1, "CPF obrigatorio")
+    .refine((value) => validateCpf(value), "CPF invalido"),
+  cidade: z.string().min(1, "Cidade obrigatoria"),
+  bairro: z.string().trim().min(2, "Bairro obrigatorio"),
+  ruaNumero: z.string().trim().min(3, "Rua e numero obrigatorios"),
+  localVotacao: z.string().trim().min(2, "Local de votacao obrigatorio"),
+  preCandidatos: z.array(z.string()).min(1, "Selecione pelo menos um pre-candidato"),
+  observacoes: z.string().max(500).optional(),
+});
+
+type FormValues = z.infer<typeof schema>;
+
+const grupos = [
+  "Governador do Estado",
+  "Primeiro Senador",
+  "Segundo Senador",
+  "Deputado Federal",
+  "Deputado Estadual",
+] as const;
+
+function CadastroPage() {
+  const navigate = useNavigate();
+  const [submitting, setSubmitting] = useState(false);
+  const [candidatos, setCandidatos] = useState<PreCandidatoOption[]>([]);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const {
+    register,
+    handleSubmit,
+    control,
+    watch,
+    setValue,
+    formState: { errors },
+  } = useForm<FormValues>({
+    resolver: zodResolver(schema),
+    defaultValues: {
+      whatsapp: "",
+      nome: "",
+      cpf: "",
+      cidade: "",
+      bairro: "",
+      ruaNumero: "",
+      localVotacao: "",
+      preCandidatos: [],
+      observacoes: "",
+    },
+    mode: "onBlur",
+  });
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadPageData() {
+      setLoadError(null);
+
+      try {
+        const preCandidatos = await buscarPreCandidatos();
+        if (!active) return;
+        setCandidatos(preCandidatos);
+      } catch {
+        if (!active) return;
+        setLoadError("Nao foi possivel carregar o formulario agora.");
+      }
+    }
+
+    void loadPageData();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const selecionados = watch("preCandidatos");
+
+  const toggleCandidato = (id: string) => {
+    const atual = watch("preCandidatos");
+    const proximo = atual.includes(id) ? atual.filter((item) => item !== id) : [...atual, id];
+    setValue("preCandidatos", proximo, { shouldValidate: true });
+  };
+
+  const onSubmit = async (data: FormValues) => {
+    setSubmitting(true);
+    setSubmitError(null);
+
+    try {
+      await enviarCadastro({ ...data, responsavelSlug: DEFAULT_RESPONSAVEL_SLUG });
+      await navigate({ to: "/obrigado" });
+    } catch (error) {
+      if (error instanceof ApiError) {
+        if (error.status === 409) {
+          setSubmitError("Este cadastro ja foi registrado anteriormente.");
+        } else if (error.status === 400) {
+          setSubmitError("Verifique os dados informados e tente novamente.");
+        } else {
+          setSubmitError("Nao foi possivel enviar o cadastro agora. Tente novamente.");
+        }
+      } else {
+        setSubmitError("Nao foi possivel enviar o cadastro agora. Tente novamente.");
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (loadError) {
+    return (
+      <AppLayout maxWidth="md">
+        <StatusCard title="Cadastro de Apoio" description={loadError} tone="error" />
+      </AppLayout>
+    );
+  }
+
+  if (candidatos.length === 0) {
+    return (
+      <AppLayout maxWidth="md">
+        <StatusCard
+          title="Carregando formulario"
+          description="Estamos preparando os dados da pre-campanha para voce."
+          tone="neutral"
+        />
+      </AppLayout>
+    );
+  }
+
+  return (
+    <AppLayout maxWidth="md">
+      <header className="mb-5">
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">
+          Sistema
+        </p>
+        <h1 className="mt-1 text-xl font-bold tracking-tight text-foreground sm:text-2xl">
+          Pre-campanha 2026
+        </h1>
+        <p className="text-sm text-muted-foreground">Cadastro de Apoio</p>
+      </header>
+
+      <form
+        onSubmit={handleSubmit(onSubmit)}
+        className="rounded-2xl border border-border bg-card p-5 shadow-[0_1px_0_rgba(15,23,42,0.03)] sm:p-7"
+        noValidate
+      >
+        <div className="mb-6">
+          <h2 className="text-lg font-semibold text-foreground">Dados do apoiador</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Preencha as informacoes abaixo para registrar seu apoio.
+          </p>
+        </div>
+
+        <div className="grid gap-8">
+          <FormSection step={1} title="Dados pessoais">
+            <Controller
+              control={control}
+              name="whatsapp"
+              render={({ field }) => (
+                <FormInput
+                  label="WhatsApp"
+                  placeholder="(79) 99999-1234"
+                  inputMode="tel"
+                  autoComplete="tel"
+                  value={field.value}
+                  onChange={(event) => field.onChange(maskWhatsapp(event.target.value))}
+                  onBlur={field.onBlur}
+                  error={errors.whatsapp?.message}
+                />
+              )}
+            />
+            <FormInput
+              label="Nome completo"
+              placeholder="Ex.: Maria Silva"
+              autoComplete="name"
+              {...register("nome")}
+              error={errors.nome?.message}
+            />
+            <Controller
+              control={control}
+              name="cpf"
+              render={({ field }) => (
+                <FormInput
+                  label="CPF"
+                  placeholder="000.000.000-00"
+                  inputMode="numeric"
+                  value={field.value}
+                  onChange={(event) => field.onChange(maskCPF(event.target.value))}
+                  onBlur={field.onBlur}
+                  error={errors.cpf?.message}
+                />
+              )}
+            />
+          </FormSection>
+
+          <FormSection step={2} title="Endereco e votacao">
+            <FormSelect
+              label="Cidade"
+              placeholder="Selecione a cidade"
+              options={cidades}
+              {...register("cidade")}
+              error={errors.cidade?.message}
+            />
+            <FormInput
+              label="Bairro / povoado"
+              placeholder="Ex.: Centro"
+              {...register("bairro")}
+              error={errors.bairro?.message}
+            />
+            <FormInput
+              label="Rua e numero"
+              placeholder="Ex.: Rua das Flores, 123"
+              {...register("ruaNumero")}
+              error={errors.ruaNumero?.message}
+            />
+            <FormInput
+              label="Local de votacao"
+              placeholder="Ex.: Escola Municipal Joao XXIII"
+              {...register("localVotacao")}
+              error={errors.localVotacao?.message}
+            />
+          </FormSection>
+
+          <FormSection
+            step={3}
+            title="Apoio politico"
+            description="Selecione os pre-candidatos que voce apoia."
+          >
+            <div className="grid gap-5">
+              {grupos.map((cargo) => {
+                const items = candidatos.filter((candidato) => candidato.cargo === cargo);
+                if (items.length === 0) return null;
+
+                return (
+                  <div key={cargo} className="grid gap-2">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      {cargo}
+                    </p>
+                    <div className="grid gap-2">
+                      {items.map((candidato) => (
+                        <CandidateCard
+                          key={candidato.id}
+                          candidato={candidato}
+                          selected={selecionados.includes(candidato.id)}
+                          onToggle={toggleCandidato}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+
+              {errors.preCandidatos && (
+                <p className="text-xs text-destructive">
+                  {errors.preCandidatos.message as string}
+                </p>
+              )}
+            </div>
+          </FormSection>
+
+          <FormSection step={4} title="Observacoes">
+            <FormTextarea
+              label="Observacoes"
+              placeholder="Algo que a equipe deve saber? (opcional)"
+              {...register("observacoes")}
+              error={errors.observacoes?.message}
+            />
+          </FormSection>
+
+          <div className="pt-2">
+            {submitError && (
+              <p className="mb-3 rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+                {submitError}
+              </p>
+            )}
+
+            <SubmitButton type="submit" loading={submitting}>
+              {submitting ? "Enviando..." : "Registrar apoio"}
+            </SubmitButton>
+            <p className="mt-3 text-center text-[11px] text-muted-foreground">
+              Seus dados serao utilizados exclusivamente pela equipe de campanha.
+            </p>
+          </div>
+        </div>
+      </form>
+    </AppLayout>
+  );
+}
+
+function StatusCard({
+  title,
+  description,
+  tone,
+}: {
+  title: string;
+  description: string;
+  tone: "neutral" | "error";
+}) {
+  return (
+    <div
+      className={`rounded-2xl border bg-card p-6 shadow-[0_1px_0_rgba(15,23,42,0.03)] sm:p-8 ${
+        tone === "error" ? "border-destructive/20" : "border-border"
+      }`}
+    >
+      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">Sistema</p>
+      <h1 className="mt-2 text-2xl font-bold tracking-tight text-foreground">{title}</h1>
+      <p className="mt-2 text-sm text-muted-foreground">{description}</p>
+    </div>
+  );
+}

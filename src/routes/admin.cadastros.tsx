@@ -1,11 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft, Search } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-import { AppLayout } from "@/components/layout/AppLayout";
-import { CadastrosTable } from "@/components/admin/CadastrosTable";
 import { CadastroMobileCard } from "@/components/admin/CadastroMobileCard";
-import { cadastrosMock } from "@/data/cadastrosMock";
+import { CadastrosTable } from "@/components/admin/CadastrosTable";
+import { AppLayout } from "@/components/layout/AppLayout";
+import { buscarCadastros } from "@/services/cadastroService";
+import type { Cadastro } from "@/types/cadastro";
 
 export const Route = createFileRoute("/admin/cadastros")({
   component: AdminCadastros,
@@ -14,22 +15,49 @@ export const Route = createFileRoute("/admin/cadastros")({
 function AdminCadastros() {
   const [query, setQuery] = useState("");
   const [cidadeFilter, setCidadeFilter] = useState<string>("todas");
+  const [cadastros, setCadastros] = useState<Cadastro[]>([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+
+    const timer = window.setTimeout(async () => {
+      try {
+        const response = await buscarCadastros({
+          search: query,
+          cidade: cidadeFilter,
+          page: 1,
+          limit: 50,
+        });
+
+        if (!active) return;
+
+        setCadastros(response.data);
+        setTotal(response.total);
+        setError(null);
+      } catch {
+        if (!active) return;
+        setError("Nao foi possivel carregar os cadastros.");
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
+      }
+    }, 250);
+
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+    };
+  }, [cidadeFilter, query]);
 
   const cidades = useMemo(
-    () => ["todas", ...Array.from(new Set(cadastrosMock.map((c) => c.cidade)))],
-    [],
+    () => ["todas", ...Array.from(new Set(cadastros.map((cadastro) => cadastro.cidade)))],
+    [cadastros],
   );
-
-  const filtered = useMemo(() => {
-    return cadastrosMock.filter((c) => {
-      const matchesQuery =
-        !query ||
-        c.nome.toLowerCase().includes(query.toLowerCase()) ||
-        c.whatsapp.includes(query);
-      const matchesCidade = cidadeFilter === "todas" || c.cidade === cidadeFilter;
-      return matchesQuery && matchesCidade;
-    });
-  }, [query, cidadeFilter]);
 
   return (
     <AppLayout maxWidth="xl">
@@ -49,7 +77,7 @@ function AdminCadastros() {
             Cadastros
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {filtered.length} {filtered.length === 1 ? "registro" : "registros"}
+            {loading ? "Carregando registros..." : `${total} ${total === 1 ? "registro" : "registros"}`}
           </p>
         </div>
       </header>
@@ -59,37 +87,53 @@ function AdminCadastros() {
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(event) => setQuery(event.target.value)}
             placeholder="Buscar por nome ou WhatsApp"
             className="h-11 w-full rounded-lg border border-border bg-white pl-10 pr-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15"
           />
         </div>
         <select
           value={cidadeFilter}
-          onChange={(e) => setCidadeFilter(e.target.value)}
+          onChange={(event) => setCidadeFilter(event.target.value)}
           className="h-11 rounded-lg border border-border bg-white px-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15"
         >
-          {cidades.map((c) => (
-            <option key={c} value={c}>
-              {c === "todas" ? "Todas as cidades" : c}
+          {cidades.map((cidade) => (
+            <option key={cidade} value={cidade}>
+              {cidade === "todas" ? "Todas as cidades" : cidade}
             </option>
           ))}
         </select>
       </div>
 
-      <div className="hidden sm:block">
-        <CadastrosTable cadastros={filtered} />
-      </div>
-      <div className="grid gap-3 sm:hidden">
-        {filtered.map((c) => (
-          <CadastroMobileCard key={c.id} cadastro={c} />
-        ))}
-        {filtered.length === 0 && (
-          <p className="rounded-2xl border border-dashed border-border bg-card p-6 text-center text-sm text-muted-foreground">
-            Nenhum cadastro encontrado.
-          </p>
-        )}
-      </div>
+      {error && <EmptyState description={error} />}
+
+      {!error && loading && <EmptyState description="Buscando os cadastros mais recentes." />}
+
+      {!error && !loading && (
+        <>
+          <div className="hidden sm:block">
+            <CadastrosTable cadastros={cadastros} />
+          </div>
+          <div className="grid gap-3 sm:hidden">
+            {cadastros.map((cadastro) => (
+              <CadastroMobileCard key={cadastro.id} cadastro={cadastro} />
+            ))}
+            {cadastros.length === 0 && (
+              <p className="rounded-2xl border border-dashed border-border bg-card p-6 text-center text-sm text-muted-foreground">
+                Nenhum cadastro encontrado.
+              </p>
+            )}
+          </div>
+        </>
+      )}
     </AppLayout>
+  );
+}
+
+function EmptyState({ description }: { description: string }) {
+  return (
+    <div className="rounded-2xl border border-dashed border-border bg-muted/20 p-6 text-center text-sm text-muted-foreground">
+      {description}
+    </div>
   );
 }

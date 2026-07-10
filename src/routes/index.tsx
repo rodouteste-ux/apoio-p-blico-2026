@@ -1,14 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight, LayoutGrid } from "lucide-react";
-import { responsaveis } from "@/data/responsaveis";
+import { PUBLIC_CADASTRO_PATH } from "@/config/campaign";
 
 export const Route = createFileRoute("/")({
   component: Home,
 });
 
 function Home() {
-  const exemploSlug = responsaveis[0]?.slug ?? "exemplo";
-
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
       <div className="w-full max-w-md">
@@ -17,14 +15,13 @@ function Home() {
             Sistema
           </p>
           <h1 className="mt-2 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-            Pré-campanha 2026
+            Pre-campanha 2026
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">Cadastro de Apoio</p>
 
           <div className="mt-6 grid gap-3">
             <Link
-              to="/cadastro/$slug"
-              params={{ slug: exemploSlug }}
+              to={PUBLIC_CADASTRO_PATH}
               className="inline-flex h-12 items-center justify-between gap-2 rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-sm transition hover:bg-primary-hover"
             >
               Iniciar cadastro
