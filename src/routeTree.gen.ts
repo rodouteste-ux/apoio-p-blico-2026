@@ -11,11 +11,13 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as ObrigadoRouteImport } from './routes/obrigado'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as CadastroRouteImport } from './routes/cadastro'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as CadastroSlugRouteImport } from './routes/cadastro.$slug'
+import { Route as AdminPreCandidatosRouteImport } from './routes/admin.pre-candidatos'
 import { Route as AdminCadastrosRouteImport } from './routes/admin.cadastros'
 
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
@@ -26,6 +28,11 @@ const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
 const ObrigadoRoute = ObrigadoRouteImport.update({
   id: '/obrigado',
   path: '/obrigado',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CadastroRoute = CadastroRouteImport.update({
@@ -53,6 +60,11 @@ const CadastroSlugRoute = CadastroSlugRouteImport.update({
   path: '/$slug',
   getParentRoute: () => CadastroRoute,
 } as any)
+const AdminPreCandidatosRoute = AdminPreCandidatosRouteImport.update({
+  id: '/pre-candidatos',
+  path: '/pre-candidatos',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminCadastrosRoute = AdminCadastrosRouteImport.update({
   id: '/cadastros',
   path: '/cadastros',
@@ -63,18 +75,22 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/cadastro': typeof CadastroRouteWithChildren
+  '/login': typeof LoginRoute
   '/obrigado': typeof ObrigadoRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/admin/cadastros': typeof AdminCadastrosRoute
+  '/admin/pre-candidatos': typeof AdminPreCandidatosRoute
   '/cadastro/$slug': typeof CadastroSlugRoute
   '/admin/': typeof AdminIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/cadastro': typeof CadastroRouteWithChildren
+  '/login': typeof LoginRoute
   '/obrigado': typeof ObrigadoRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/admin/cadastros': typeof AdminCadastrosRoute
+  '/admin/pre-candidatos': typeof AdminPreCandidatosRoute
   '/cadastro/$slug': typeof CadastroSlugRoute
   '/admin': typeof AdminIndexRoute
 }
@@ -83,9 +99,11 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/cadastro': typeof CadastroRouteWithChildren
+  '/login': typeof LoginRoute
   '/obrigado': typeof ObrigadoRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/admin/cadastros': typeof AdminCadastrosRoute
+  '/admin/pre-candidatos': typeof AdminPreCandidatosRoute
   '/cadastro/$slug': typeof CadastroSlugRoute
   '/admin/': typeof AdminIndexRoute
 }
@@ -95,18 +113,22 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/cadastro'
+    | '/login'
     | '/obrigado'
     | '/sitemap.xml'
     | '/admin/cadastros'
+    | '/admin/pre-candidatos'
     | '/cadastro/$slug'
     | '/admin/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/cadastro'
+    | '/login'
     | '/obrigado'
     | '/sitemap.xml'
     | '/admin/cadastros'
+    | '/admin/pre-candidatos'
     | '/cadastro/$slug'
     | '/admin'
   id:
@@ -114,9 +136,11 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/cadastro'
+    | '/login'
     | '/obrigado'
     | '/sitemap.xml'
     | '/admin/cadastros'
+    | '/admin/pre-candidatos'
     | '/cadastro/$slug'
     | '/admin/'
   fileRoutesById: FileRoutesById
@@ -125,6 +149,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRouteWithChildren
   CadastroRoute: typeof CadastroRouteWithChildren
+  LoginRoute: typeof LoginRoute
   ObrigadoRoute: typeof ObrigadoRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
 }
@@ -143,6 +168,13 @@ declare module '@tanstack/react-router' {
       path: '/obrigado'
       fullPath: '/obrigado'
       preLoaderRoute: typeof ObrigadoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/cadastro': {
@@ -180,6 +212,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CadastroSlugRouteImport
       parentRoute: typeof CadastroRoute
     }
+    '/admin/pre-candidatos': {
+      id: '/admin/pre-candidatos'
+      path: '/pre-candidatos'
+      fullPath: '/admin/pre-candidatos'
+      preLoaderRoute: typeof AdminPreCandidatosRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/cadastros': {
       id: '/admin/cadastros'
       path: '/cadastros'
@@ -192,11 +231,13 @@ declare module '@tanstack/react-router' {
 
 interface AdminRouteChildren {
   AdminCadastrosRoute: typeof AdminCadastrosRoute
+  AdminPreCandidatosRoute: typeof AdminPreCandidatosRoute
   AdminIndexRoute: typeof AdminIndexRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
   AdminCadastrosRoute: AdminCadastrosRoute,
+  AdminPreCandidatosRoute: AdminPreCandidatosRoute,
   AdminIndexRoute: AdminIndexRoute,
 }
 
@@ -218,6 +259,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRouteWithChildren,
   CadastroRoute: CadastroRouteWithChildren,
+  LoginRoute: LoginRoute,
   ObrigadoRoute: ObrigadoRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
 }

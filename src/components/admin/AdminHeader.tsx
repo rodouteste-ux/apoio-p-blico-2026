@@ -1,7 +1,17 @@
-import { Link } from "@tanstack/react-router";
-import { LayoutGrid } from "lucide-react";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { LayoutGrid, LogOut, Settings2 } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import { signOutAdmin } from "@/services/authService";
 
 export function AdminHeader() {
+  const navigate = useNavigate();
+
+  async function handleLogout() {
+    await signOutAdmin();
+    await navigate({ to: "/login", search: { redirect: "/admin", reason: "" } });
+  }
+
   return (
     <header className="mb-6">
       <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 sm:flex sm:items-center sm:justify-between">
@@ -24,6 +34,17 @@ export function AdminHeader() {
             <LayoutGrid className="h-4 w-4" />
             Ver cadastros
           </Link>
+          <Link
+            to="/admin/pre-candidatos"
+            className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-border bg-white px-3.5 text-sm font-medium text-foreground transition hover:border-primary/40 hover:bg-accent"
+          >
+            <Settings2 className="h-4 w-4" />
+            Gerenciar pre-candidatos
+          </Link>
+          <Button type="button" variant="outline" onClick={handleLogout}>
+            <LogOut className="h-4 w-4" />
+            Sair
+          </Button>
         </div>
       </div>
     </header>

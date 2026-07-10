@@ -1,10 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, Search } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { CadastroMobileCard } from "@/components/admin/CadastroMobileCard";
 import { CadastrosTable } from "@/components/admin/CadastrosTable";
 import { AppLayout } from "@/components/layout/AppLayout";
+import { Button } from "@/components/ui/button";
 import { buscarCadastros } from "@/services/cadastroService";
 import type { Cadastro } from "@/types/cadastro";
 
@@ -17,8 +18,11 @@ function AdminCadastros() {
   const [cidadeFilter, setCidadeFilter] = useState<string>("todas");
   const [cadastros, setCadastros] = useState<Cadastro[]>([]);
   const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -29,14 +33,15 @@ function AdminCadastros() {
         const response = await buscarCadastros({
           search: query,
           cidade: cidadeFilter,
-          page: 1,
-          limit: 50,
+          page,
+          limit: 20,
         });
 
         if (!active) return;
 
         setCadastros(response.data);
         setTotal(response.total);
+        setTotalPages(response.totalPages);
         setError(null);
       } catch {
         if (!active) return;
@@ -46,12 +51,16 @@ function AdminCadastros() {
           setLoading(false);
         }
       }
-    }, 250);
+    }, 350);
 
     return () => {
       active = false;
       window.clearTimeout(timer);
     };
+  }, [cidadeFilter, page, query, retryKey]);
+
+  useEffect(() => {
+    setPage(1);
   }, [cidadeFilter, query]);
 
   const cidades = useMemo(
@@ -105,7 +114,16 @@ function AdminCadastros() {
         </select>
       </div>
 
-      {error && <EmptyState description={error} />}
+      {error && (
+        <>
+          <EmptyState description={error} />
+          <div className="mt-3 flex justify-center">
+            <Button type="button" variant="outline" onClick={() => setRetryKey((current) => current + 1)}>
+              Tentar novamente
+            </Button>
+          </div>
+        </>
+      )}
 
       {!error && loading && <EmptyState description="Buscando os cadastros mais recentes." />}
 
@@ -125,6 +143,36 @@ function AdminCadastros() {
             )}
           </div>
         </>
+      )}
+
+      {!error && !loading && totalPages > 1 && (
+        <div className="mt-6 flex items-center justify-between gap-3 rounded-2xl border border-border bg-card px-4 py-3">
+          <p className="text-sm text-muted-foreground">
+            Pagina {page} de {totalPages}
+          </p>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={page <= 1}
+              onClick={() => setPage((current) => Math.max(1, current - 1))}
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Anterior
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={page >= totalPages}
+              onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
+            >
+              Proxima
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
       )}
     </AppLayout>
   );

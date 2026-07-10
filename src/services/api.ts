@@ -1,4 +1,5 @@
 import { env } from "@/config/env";
+import { getAdminAccessToken } from "./authService";
 
 const API_URL = (env.apiUrl ?? "").trim();
 
@@ -17,17 +18,30 @@ export class ApiError extends Error {
   }
 }
 
-export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
+export async function apiRequest<T>(
+  path: string,
+  init?: RequestInit & { auth?: boolean },
+): Promise<T> {
+  const token = init?.auth ? await getAdminAccessToken() : null;
+  if (init?.auth && !token) {
+    throw new ApiError("Autenticacao necessaria.", 401);
+  }
+
   const response = await fetch(buildApiUrl(path), {
     headers: {
       "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(init?.headers ?? {}),
     },
     ...init,
   });
 
+  const contentType = response.headers.get("content-type");
   const text = await response.text();
-  const payload = text ? (JSON.parse(text) as Record<string, unknown>) : null;
+  const payload =
+    text && contentType?.includes("application/json")
+      ? (JSON.parse(text) as Record<string, unknown>)
+      : null;
 
   if (!response.ok) {
     const message =

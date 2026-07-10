@@ -26,6 +26,8 @@ export interface DashboardMetric {
   totalCidades: number;
   totalApoios: number;
   responsaveisAtivos: number;
+  totalPreCandidatosAtivos?: number;
+  totalPreCandidatosInativos?: number;
   apoiosPorPreCandidato: Array<
     Apoio & {
       totalApoios: number;
@@ -39,4 +41,5 @@ export interface CadastrosResponse {
   page: number;
   limit: number;
   total: number;
+  totalPages: number;
 }

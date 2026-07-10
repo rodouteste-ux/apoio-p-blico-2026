@@ -1,11 +1,12 @@
 import { z } from "zod";
 
+import { getCadastroConfig } from "./_lib/cadastro-config";
 import { getSupabaseServerClient } from "./_lib/supabase";
 import { getOriginIp, json, methodNotAllowed, readJsonBody } from "./_lib/http";
 import { normalizeCpf, normalizePhone, validateCpf } from "./_lib/personal-data";
 
 const cadastroSchema = z.object({
-  slug: z.string().trim().min(1),
+  slug: z.string().trim().min(1).optional(),
   nome_completo: z.string().trim().min(3),
   telefone: z.string().trim().min(10),
   cpf: z.string().trim().min(11),
@@ -32,10 +33,17 @@ export default async function handler(req: any, res: any) {
     }
 
     const supabase = getSupabaseServerClient();
+    const cadastroConfig = await getCadastroConfig();
+    const slug = body.slug ?? cadastroConfig.slug;
+
+    if (!slug) {
+      return json(res, 404, { error: "Link de cadastro nao encontrado ou inativo." });
+    }
+
     const { data: responsavel, error: responsavelError } = await supabase
       .from("responsaveis")
       .select("id")
-      .eq("slug", body.slug)
+      .eq("slug", slug)
       .eq("ativo", true)
       .maybeSingle();
 

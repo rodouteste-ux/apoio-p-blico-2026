@@ -1,5 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { MapPin, ThumbsUp, TrendingUp, UserCheck, Users } from "lucide-react";
+import {
+  ListChecks,
+  MapPin,
+  Settings2,
+  ThumbsUp,
+  TrendingUp,
+  UserCheck,
+  Users,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { AdminHeader } from "@/components/admin/AdminHeader";
@@ -46,27 +54,34 @@ function AdminDashboard() {
     <AppLayout maxWidth="xl">
       <AdminHeader />
 
-      <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5">
-        <MetricCard
-          label="Total de cadastros"
-          value={dashboard?.totalCadastros ?? "—"}
-          icon={Users}
-        />
-        <MetricCard
-          label="Cadastros hoje"
-          value={dashboard?.cadastrosHoje ?? "—"}
-          icon={TrendingUp}
-        />
+      <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-7">
+        <MetricCard label="Total de cadastros" value={dashboard?.totalCadastros ?? "—"} icon={Users} />
+        <MetricCard label="Cadastros hoje" value={dashboard?.cadastrosHoje ?? "—"} icon={TrendingUp} />
         <MetricCard label="Cidades" value={dashboard?.totalCidades ?? "—"} icon={MapPin} />
+        <MetricCard label="Apoios registrados" value={dashboard?.totalApoios ?? "—"} icon={ThumbsUp} />
+        <MetricCard label="Responsaveis ativos" value={dashboard?.responsaveisAtivos ?? "—"} icon={UserCheck} />
         <MetricCard
-          label="Apoios registrados"
-          value={dashboard?.totalApoios ?? "—"}
-          icon={ThumbsUp}
+          label="Pre-candidatos ativos"
+          value={dashboard?.totalPreCandidatosAtivos ?? "—"}
+          icon={ListChecks}
         />
         <MetricCard
-          label="Responsaveis ativos"
-          value={dashboard?.responsaveisAtivos ?? "—"}
-          icon={UserCheck}
+          label="Pre-candidatos inativos"
+          value={dashboard?.totalPreCandidatosInativos ?? "—"}
+          icon={Settings2}
+        />
+      </section>
+
+      <section className="mt-6 grid gap-3 sm:grid-cols-2">
+        <QuickLinkCard
+          to="/admin/cadastros"
+          title="Ver cadastros"
+          description="Acompanhe a lista completa com busca, filtros e paginacao."
+        />
+        <QuickLinkCard
+          to="/admin/pre-candidatos"
+          title="Gerenciar pre-candidatos"
+          description="Cadastre, edite, ordene e controle quem aparece no formulario."
         />
       </section>
 
@@ -76,10 +91,7 @@ function AdminDashboard() {
         ) : (
           <PanelMessage
             title={error ? "Falha ao carregar ranking" : "Carregando ranking"}
-            description={
-              error ??
-              "Estamos preparando a distribuicao dos apoios por pre-candidato."
-            }
+            description={error ?? "Estamos preparando a distribuicao dos apoios por pre-candidato."}
           />
         )}
       </div>
@@ -98,9 +110,7 @@ function AdminDashboard() {
         {!dashboard && (
           <PanelMessage
             title={error ? "Falha ao carregar cadastros" : "Carregando cadastros"}
-            description={
-              error ?? "Buscando os registros mais recentes para preencher o painel."
-            }
+            description={error ?? "Buscando os registros mais recentes para preencher o painel."}
           />
         )}
 
@@ -134,5 +144,25 @@ function PanelMessage({ title, description }: { title: string; description: stri
       <p className="text-sm font-semibold text-foreground">{title}</p>
       <p className="mt-1 text-sm text-muted-foreground">{description}</p>
     </div>
+  );
+}
+
+function QuickLinkCard({
+  to,
+  title,
+  description,
+}: {
+  to: "/admin/cadastros" | "/admin/pre-candidatos";
+  title: string;
+  description: string;
+}) {
+  return (
+    <Link
+      to={to}
+      className="rounded-2xl border border-border bg-card p-5 shadow-[0_1px_0_rgba(15,23,42,0.03)] transition hover:border-primary/40 hover:bg-accent/40"
+    >
+      <h2 className="text-base font-semibold text-foreground">{title}</h2>
+      <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+    </Link>
   );
 }

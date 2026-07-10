@@ -1,3 +1,4 @@
+import { handleAdminAuthError, requireAdmin } from "../_lib/admin-auth";
 import { getSupabaseServerClient } from "../_lib/supabase";
 import { formatPhone, maskCpf } from "../_lib/personal-data";
 import { json, methodNotAllowed } from "../_lib/http";
@@ -8,6 +9,7 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
+    await requireAdmin(req);
     const supabase = getSupabaseServerClient();
     const today = new Date();
     const startOfDayUtc = new Date(
@@ -20,6 +22,8 @@ export default async function handler(req: any, res: any) {
       cidadesResult,
       totalApoiosResult,
       responsaveisAtivosResult,
+      totalPreCandidatosAtivosResult,
+      totalPreCandidatosInativosResult,
       apoiosResult,
       ultimosCadastrosResult,
     ] = await Promise.all([
@@ -34,6 +38,8 @@ export default async function handler(req: any, res: any) {
         .from("responsaveis")
         .select("id", { count: "exact", head: true })
         .eq("ativo", true),
+      supabase.from("pre_candidatos").select("id", { count: "exact", head: true }).eq("ativo", true),
+      supabase.from("pre_candidatos").select("id", { count: "exact", head: true }).eq("ativo", false),
       supabase.from("apoios_candidatos").select("id, nome_pre_candidato, cargo, pre_candidato_id"),
       supabase
         .from("cadastros_apoio")
@@ -48,6 +54,8 @@ export default async function handler(req: any, res: any) {
       cidadesResult,
       totalApoiosResult,
       responsaveisAtivosResult,
+      totalPreCandidatosAtivosResult,
+      totalPreCandidatosInativosResult,
       apoiosResult,
       ultimosCadastrosResult,
     ];
@@ -79,6 +87,8 @@ export default async function handler(req: any, res: any) {
       total_cidades: new Set((cidadesResult.data ?? []).map((item) => item.cidade)).size,
       total_apoios: totalApoiosResult.count ?? 0,
       responsaveis_ativos: responsaveisAtivosResult.count ?? 0,
+      total_pre_candidatos_ativos: totalPreCandidatosAtivosResult.count ?? 0,
+      total_pre_candidatos_inativos: totalPreCandidatosInativosResult.count ?? 0,
       apoios_por_pre_candidato: Array.from(groupedApoios.values()).sort(
         (a, b) => b.totalApoios - a.totalApoios,
       ),
@@ -97,6 +107,10 @@ export default async function handler(req: any, res: any) {
       })),
     });
   } catch (error) {
+    if (error instanceof Error && error.name === "AdminAuthError") {
+      return handleAdminAuthError(res, error, "/api/admin/dashboard");
+    }
+
     console.error("Erro ao carregar dashboard admin:", error);
     return json(res, 500, { error: "Nao foi possivel carregar o dashboard." });
   }

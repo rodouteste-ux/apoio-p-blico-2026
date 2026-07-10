@@ -11,10 +11,10 @@ import { FormSelect } from "@/components/form/FormSelect";
 import { FormTextarea } from "@/components/form/FormTextarea";
 import { SubmitButton } from "@/components/form/SubmitButton";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { DEFAULT_RESPONSAVEL_SLUG } from "@/config/campaign";
 import { cidades } from "@/data/cidades";
 import { validateCpf } from "@/lib/personal-data";
 import {
+  buscarCadastroConfig,
   buscarPreCandidatos,
   enviarCadastro,
   type PreCandidatoOption,
@@ -58,6 +58,8 @@ function CadastroPage() {
   const navigate = useNavigate();
   const [submitting, setSubmitting] = useState(false);
   const [candidatos, setCandidatos] = useState<PreCandidatoOption[]>([]);
+  const [cadastroAtivo, setCadastroAtivo] = useState<boolean | null>(null);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
@@ -89,14 +91,23 @@ function CadastroPage() {
 
     async function loadPageData() {
       setLoadError(null);
+      setInitialLoading(true);
 
       try {
-        const preCandidatos = await buscarPreCandidatos();
+        const [config, preCandidatos] = await Promise.all([
+          buscarCadastroConfig(),
+          buscarPreCandidatos(),
+        ]);
         if (!active) return;
+        setCadastroAtivo(config.ativo);
         setCandidatos(preCandidatos);
       } catch {
         if (!active) return;
-        setLoadError("Nao foi possivel carregar o formulario agora.");
+        setLoadError("Nao foi possivel carregar as opcoes de apoio. Tente novamente.");
+      } finally {
+        if (active) {
+          setInitialLoading(false);
+        }
       }
     }
 
@@ -120,7 +131,7 @@ function CadastroPage() {
     setSubmitError(null);
 
     try {
-      await enviarCadastro({ ...data, responsavelSlug: DEFAULT_RESPONSAVEL_SLUG });
+      await enviarCadastro(data);
       await navigate({ to: "/obrigado" });
     } catch (error) {
       if (error instanceof ApiError) {
@@ -147,12 +158,36 @@ function CadastroPage() {
     );
   }
 
-  if (candidatos.length === 0) {
+  if (cadastroAtivo === false) {
+    return (
+      <AppLayout maxWidth="md">
+        <StatusCard
+          title="Cadastro indisponivel"
+          description="No momento este link de cadastro esta indisponivel."
+          tone="neutral"
+        />
+      </AppLayout>
+    );
+  }
+
+  if (initialLoading || cadastroAtivo === null) {
     return (
       <AppLayout maxWidth="md">
         <StatusCard
           title="Carregando formulario"
           description="Estamos preparando os dados da pre-campanha para voce."
+          tone="neutral"
+        />
+      </AppLayout>
+    );
+  }
+
+  if (candidatos.length === 0) {
+    return (
+      <AppLayout maxWidth="md">
+        <StatusCard
+          title="Cadastro de Apoio"
+          description="Nenhuma opcao de apoio esta disponivel no momento."
           tone="neutral"
         />
       </AppLayout>

@@ -1,4 +1,4 @@
-import type { Cargo } from "@/types/candidato";
+import type { AdminPreCandidato, Cargo } from "@/types/candidato";
 import type { CadastrosResponse, DashboardMetric } from "@/types/cadastro";
 
 import { apiRequest } from "./api";
@@ -13,7 +13,7 @@ export interface CadastroPayload {
   localVotacao: string;
   preCandidatos: string[];
   observacoes?: string;
-  responsavelSlug: string;
+  responsavelSlug?: string;
 }
 
 export interface PreCandidatoOption {
@@ -34,6 +34,8 @@ interface DashboardApiResponse {
   total_cidades: number;
   total_apoios: number;
   responsaveis_ativos: number;
+  total_pre_candidatos_ativos: number;
+  total_pre_candidatos_inativos: number;
   apoios_por_pre_candidato: Array<{
     nomePreCandidato: string;
     cargo: string;
@@ -68,6 +70,20 @@ interface CadastrosApiResponse {
   page: number;
   limit: number;
   total: number;
+  totalPages: number;
+}
+
+interface CadastroConfigResponse {
+  ativo: boolean;
+}
+
+interface AdminPreCandidatoApiItem {
+  id: string;
+  nome: string;
+  cargo: string;
+  ativo: boolean;
+  ordem: number;
+  criado_em: string;
 }
 
 function mapCadastro(item: CadastroApiItem) {
@@ -114,12 +130,18 @@ export function buscarPreCandidatos() {
   return apiRequest<PreCandidatoOption[]>("/api/pre-candidatos");
 }
 
+export function buscarCadastroConfig() {
+  return apiRequest<CadastroConfigResponse>("/api/cadastro-config");
+}
+
 export function validarResponsavel(slug: string) {
   return apiRequest<ResponsavelStatus>(`/api/responsaveis/${slug}`);
 }
 
 export async function buscarDashboard(): Promise<DashboardMetric> {
-  const response = await apiRequest<DashboardApiResponse>("/api/admin/dashboard");
+  const response = await apiRequest<DashboardApiResponse>("/api/admin/dashboard", {
+    auth: true,
+  });
 
   return {
     totalCadastros: response.total_cadastros,
@@ -127,6 +149,8 @@ export async function buscarDashboard(): Promise<DashboardMetric> {
     totalCidades: response.total_cidades,
     totalApoios: response.total_apoios,
     responsaveisAtivos: response.responsaveis_ativos,
+    totalPreCandidatosAtivos: response.total_pre_candidatos_ativos,
+    totalPreCandidatosInativos: response.total_pre_candidatos_inativos,
     apoiosPorPreCandidato: response.apoios_por_pre_candidato.map((item) => ({
       nomePreCandidato: item.nomePreCandidato,
       cargo: item.cargo,
@@ -152,6 +176,7 @@ export async function buscarCadastros(params: {
 
   const response = await apiRequest<CadastrosApiResponse>(
     `/api/admin/cadastros${searchParams.toString() ? `?${searchParams.toString()}` : ""}`,
+    { auth: true },
   );
 
   return {
@@ -159,5 +184,79 @@ export async function buscarCadastros(params: {
     page: response.page,
     limit: response.limit,
     total: response.total,
+    totalPages: response.totalPages,
   };
+}
+
+function mapAdminPreCandidato(item: AdminPreCandidatoApiItem): AdminPreCandidato {
+  return {
+    id: item.id,
+    nome: item.nome,
+    cargo: item.cargo,
+    ativo: item.ativo,
+    ordem: item.ordem,
+    criadoEm: item.criado_em,
+  };
+}
+
+export async function buscarAdminPreCandidatos() {
+  const response = await apiRequest<AdminPreCandidatoApiItem[]>("/api/admin/pre-candidatos", {
+    auth: true,
+  });
+  return response.map(mapAdminPreCandidato);
+}
+
+export async function criarAdminPreCandidato(payload: {
+  nome: string;
+  cargo: string;
+  ativo: boolean;
+  ordem: number;
+}) {
+  const response = await apiRequest<AdminPreCandidatoApiItem>("/api/admin/pre-candidatos", {
+    method: "POST",
+    auth: true,
+    body: JSON.stringify(payload),
+  });
+  return mapAdminPreCandidato(response);
+}
+
+export async function atualizarAdminPreCandidato(
+  id: string,
+  payload: {
+    nome: string;
+    cargo: string;
+    ativo: boolean;
+    ordem: number;
+  },
+) {
+  const response = await apiRequest<AdminPreCandidatoApiItem>(`/api/admin/pre-candidatos/${id}`, {
+    method: "PUT",
+    auth: true,
+    body: JSON.stringify(payload),
+  });
+  return mapAdminPreCandidato(response);
+}
+
+export async function atualizarStatusPreCandidato(id: string, ativo: boolean) {
+  const response = await apiRequest<AdminPreCandidatoApiItem>(
+    `/api/admin/pre-candidatos/${id}/status`,
+    {
+      method: "PATCH",
+      auth: true,
+      body: JSON.stringify({ ativo }),
+    },
+  );
+  return mapAdminPreCandidato(response);
+}
+
+export async function atualizarOrdemPreCandidato(id: string, ordem: number) {
+  const response = await apiRequest<AdminPreCandidatoApiItem>(
+    `/api/admin/pre-candidatos/${id}/ordem`,
+    {
+      method: "PATCH",
+      auth: true,
+      body: JSON.stringify({ ordem }),
+    },
+  );
+  return mapAdminPreCandidato(response);
 }

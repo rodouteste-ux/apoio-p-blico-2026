@@ -23,6 +23,7 @@ create table if not exists pre_candidatos (
 
 create index if not exists idx_pre_candidatos_ativo on pre_candidatos(ativo);
 create index if not exists idx_pre_candidatos_ordem on pre_candidatos(ordem);
+create index if not exists idx_pre_candidatos_ativo_ordem on pre_candidatos(ativo, ordem);
 
 create table if not exists cadastros_apoio (
   id uuid primary key default gen_random_uuid(),
@@ -45,8 +46,11 @@ create table if not exists cadastros_apoio (
 create index if not exists idx_cadastros_responsavel on cadastros_apoio(responsavel_id);
 create index if not exists idx_cadastros_cidade on cadastros_apoio(cidade);
 create index if not exists idx_cadastros_criado_em on cadastros_apoio(criado_em);
+create index if not exists idx_cadastros_criado_em_desc on cadastros_apoio(criado_em desc);
 create index if not exists idx_cadastros_cpf on cadastros_apoio(cpf_normalizado);
 create index if not exists idx_cadastros_telefone on cadastros_apoio(telefone_normalizado);
+create index if not exists idx_cadastros_nome on cadastros_apoio(nome_completo);
+create index if not exists idx_cadastros_telefone_normalizado on cadastros_apoio(telefone_normalizado);
 
 create unique index if not exists unique_cadastro_cpf_por_responsavel
   on cadastros_apoio(responsavel_id, cpf_normalizado);
@@ -65,11 +69,28 @@ create table if not exists apoios_candidatos (
 
 create index if not exists idx_apoios_cadastro on apoios_candidatos(cadastro_id);
 create index if not exists idx_apoios_pre_candidato on apoios_candidatos(pre_candidato_id);
+create index if not exists idx_apoios_cadastro_id on apoios_candidatos(cadastro_id);
+
+create table if not exists admin_users (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null,
+  email text not null unique,
+  nome text,
+  role text not null default 'admin',
+  ativo boolean not null default true,
+  criado_em timestamptz not null default now(),
+  constraint admin_users_role_check check (role in ('super_admin', 'admin', 'visualizador'))
+);
+
+create index if not exists idx_admin_users_user_id on admin_users(user_id);
+create index if not exists idx_admin_users_email on admin_users(email);
+create index if not exists idx_admin_users_ativo on admin_users(ativo);
 
 alter table responsaveis enable row level security;
 alter table pre_candidatos enable row level security;
 alter table cadastros_apoio enable row level security;
 alter table apoios_candidatos enable row level security;
+alter table admin_users enable row level security;
 
 drop policy if exists "responsaveis_public_read" on responsaveis;
 create policy "responsaveis_public_read"
