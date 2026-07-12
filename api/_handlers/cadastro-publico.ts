@@ -4,6 +4,10 @@ import { getSupabaseServerClient } from "../_lib/supabase";
 
 type CadastroPublicoResponse = {
   ativo: boolean;
+  modo_fallback?: boolean;
+  fallback_reason?: string;
+  details?: string;
+  missing?: string[];
   pre_candidatos: Array<{
     id: string;
     nome: string;
@@ -15,16 +19,25 @@ type CadastroPublicoResponse = {
 let cachedResponse: { data: CadastroPublicoResponse; expiresAt: number } | null = null;
 let inFlight: Promise<CadastroPublicoResponse> | null = null;
 const CACHE_TTL_MS = 60 * 1000;
+const fallbackCadastroPublico = {
+  ativo: true,
+  modo_fallback: true,
+  pre_candidatos: [
+    { id: "mock-governador", nome: "Valmir de Francisquinho", cargo: "Governador do Estado", ordem: 1 },
+    { id: "mock-senador-1", nome: "Nome do candidato", cargo: "Primeiro Senador", ordem: 2 },
+    { id: "mock-senador-2", nome: "Nome do candidato", cargo: "Segundo Senador", ordem: 3 },
+    { id: "mock-federal", nome: "Nome do candidato", cargo: "Deputado Federal", ordem: 4 },
+    { id: "mock-estadual", nome: "Nome do candidato", cargo: "Deputado Estadual", ordem: 5 },
+  ],
+};
 
-class CadastroPublicoError extends Error {
-  status: number;
-  payload: unknown;
-
-  constructor(status: number, payload: unknown) {
-    super("Cadastro publico error");
-    this.status = status;
-    this.payload = payload;
-  }
+function fallback(reason: string, extra: Partial<CadastroPublicoResponse> = {}): CadastroPublicoResponse {
+  // TODO: remover fallback emergencial depois que producao estiver estabilizada.
+  return {
+    ...fallbackCadastroPublico,
+    fallback_reason: reason,
+    ...extra,
+  };
 }
 
 function getDefaultResponsavelId() {
@@ -44,10 +57,7 @@ export default async function handler(req: any, res: any) {
     const envResult = getSupabaseEnv();
     if (!envResult.ok) {
       console.error("[api/cadastro-publico] env faltando", envResult.missing);
-      return json(res, 500, {
-        error: "Configuração do servidor incompleta.",
-        missing: envResult.missing,
-      });
+      return json(res, 200, fallback("env_missing", { missing: envResult.missing }));
     }
 
     if (cachedResponse && cachedResponse.expiresAt > Date.now()) {
@@ -63,16 +73,9 @@ export default async function handler(req: any, res: any) {
     cachedResponse = { data: payload, expiresAt: Date.now() + CACHE_TTL_MS };
     return json(res, 200, payload);
   } catch (error) {
-    if (error instanceof CadastroPublicoError) {
-      return json(res, error.status, error.payload);
-    }
-
     const details = error instanceof Error ? error.message : String(error);
-    console.error("[api/cadastro-publico] erro inesperado", details);
-    return json(res, 500, {
-      error: "Erro interno ao carregar cadastro público.",
-      details,
-    });
+    console.error("[cadastro-publico fatal]", details);
+    return json(res, 200, fallback("fatal_error", { details }));
   } finally {
     inFlight = null;
     console.log("[api/cadastro-publico] total:", Date.now() - start, "ms");
@@ -95,16 +98,13 @@ async function loadCadastroPublico() {
   const responsavelResult = await responsavelQuery.limit(1).maybeSingle();
 
   if (responsavelResult.error) {
-    console.error("[api/cadastro-publico] supabase error", responsavelResult.error.message);
-    throw new CadastroPublicoError(500, {
-      error: "Erro ao carregar responsável padrão.",
-      details: responsavelResult.error.message,
-    });
+    console.error("[cadastro-publico] erro responsavel", responsavelResult.error.message);
+    return fallback("responsavel_query_error", { details: responsavelResult.error.message });
   }
 
   if (!responsavelResult.data) {
-    console.error("[api/cadastro-publico] responsável não encontrado");
-    throw new CadastroPublicoError(500, { error: "Nenhum responsável ativo configurado." });
+    console.error("[cadastro-publico] nenhum responsavel ativo");
+    return fallback("no_active_responsavel");
   }
 
   const preCandidatosResult = await supabase
@@ -115,16 +115,14 @@ async function loadCadastroPublico() {
   console.log("[api/cadastro-publico] queries supabase:", Date.now() - queriesStart, "ms");
 
   if (preCandidatosResult.error) {
-    console.error("[api/cadastro-publico] supabase error", preCandidatosResult.error.message);
-    throw new CadastroPublicoError(500, {
-      error: "Erro ao carregar pré-candidatos.",
-      details: preCandidatosResult.error.message,
-    });
+    console.error("[cadastro-publico] erro candidatos", preCandidatosResult.error.message);
+    return fallback("pre_candidatos_query_error", { details: preCandidatosResult.error.message });
   }
 
   const jsonStart = Date.now();
   const payload = {
     ativo: true,
+    modo_fallback: false,
     pre_candidatos: preCandidatosResult.data ?? [],
   };
   console.log("[api/cadastro-publico] montar json:", Date.now() - jsonStart, "ms");

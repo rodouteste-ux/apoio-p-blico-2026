@@ -1,11 +1,11 @@
-export function json(res: any, status: number, payload: unknown) {
-  if (typeof res.status === "function" && typeof res.json === "function") {
-    return res.status(status).json(payload);
-  }
-
-  res.statusCode = status;
+export function sendJson(res: any, statusCode: number, body: unknown) {
+  res.statusCode = statusCode;
   res.setHeader("Content-Type", "application/json; charset=utf-8");
-  return res.end(JSON.stringify(payload));
+  return res.end(JSON.stringify(body));
+}
+
+export function json(res: any, status: number, payload: unknown) {
+  return sendJson(res, status, payload);
 }
 
 export function methodNotAllowed(res: any, methods: string[]) {
@@ -32,6 +32,8 @@ export async function readJsonBody(req: any) {
 }
 
 export const readJson = readJsonBody;
+
+export const readBody = readJsonBody;
 
 export function getOriginIp(req: any): string | null {
   const forwarded = req.headers["x-forwarded-for"];

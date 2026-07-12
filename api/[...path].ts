@@ -1,60 +1,41 @@
-import handleAdminCadastros from "./_handlers/admin/cadastros";
-import handleAdminDashboard from "./_handlers/admin/dashboard";
-import handleAdminMe from "./_handlers/admin/me";
-import handleAdminPreCandidatos from "./_handlers/admin/pre-candidatos";
-import handleAtualizarPreCandidato from "./_handlers/admin/pre-candidatos/[id]";
-import handleAtualizarOrdemPreCandidato from "./_handlers/admin/pre-candidatos/[id]/ordem";
-import handleAtualizarStatusPreCandidato from "./_handlers/admin/pre-candidatos/[id]/status";
-import handleCadastroConfig from "./_handlers/cadastro-config";
-import handleCadastroPublico from "./_handlers/cadastro-publico";
-import handleCriarCadastro from "./_handlers/cadastros";
-import handlePreCandidatos from "./_handlers/pre-candidatos";
-import handleResponsavel from "./_handlers/responsaveis/[slug]";
-import { json, methodNotAllowed } from "./_lib/http";
-
 type ApiRequest = {
   method?: string;
   url?: string;
   query?: Record<string, unknown>;
 };
 
+function sendJson(res: any, statusCode: number, body: unknown) {
+  res.statusCode = statusCode;
+  res.setHeader("Content-Type", "application/json; charset=utf-8");
+  return res.end(JSON.stringify(body));
+}
+
+function methodNotAllowed(res: any, methods: string[]) {
+  res.setHeader("Allow", methods.join(", "));
+  return sendJson(res, 405, { error: "Metodo nao permitido." });
+}
+
 function getRouteInfo(req: ApiRequest) {
-  const url = new URL(req.url || "/api", "http://localhost");
-  const pathFromUrl = url.pathname.replace(/^\/api\/?/, "");
-  if (pathFromUrl && !pathFromUrl.startsWith("[...path]")) {
-    const parts = pathFromUrl.split("/").filter(Boolean).map((part) => decodeURIComponent(part));
-    return {
-      pathname: parts.join("/"),
-      parts,
-      rawUrl: req.url || "",
-    };
+  const rawUrl = req.url || "";
+  const url = new URL(rawUrl || "/api", "https://dummy.local");
+  let pathname = url.pathname.replace(/^\/api\/?/, "").replace(/\/$/, "");
+
+  if (!pathname || pathname.startsWith("[...path]")) {
+    const rawPath = req.query?.path;
+    if (Array.isArray(rawPath)) {
+      pathname = rawPath.map((part) => String(part)).filter(Boolean).join("/");
+    } else if (typeof rawPath === "string") {
+      pathname = rawPath.replace(/\/$/, "");
+    } else {
+      pathname = (url.searchParams.get("path") ?? "").replace(/\/$/, "");
+    }
   }
 
-  const rawPath = req.query?.path;
-  if (Array.isArray(rawPath)) {
-    const parts = rawPath.map((part) => String(part)).filter(Boolean);
-    return {
-      pathname: parts.join("/"),
-      parts,
-      rawUrl: req.url || "",
-    };
-  }
-
-  if (typeof rawPath === "string" && rawPath) {
-    const parts = rawPath.split("/").filter(Boolean);
-    return {
-      pathname: parts.join("/"),
-      parts,
-      rawUrl: req.url || "",
-    };
-  }
-
-  const pathParam = url.searchParams.get("path") ?? "";
-  const parts = pathParam.split("/").filter(Boolean);
+  const parts = pathname.split("/").filter(Boolean).map((part) => decodeURIComponent(part));
   return {
+    rawUrl,
     pathname: parts.join("/"),
     parts,
-    rawUrl: req.url || "",
   };
 }
 
@@ -66,88 +47,113 @@ function withQuery(req: any, params: Record<string, string>) {
   return req;
 }
 
+function debugEnvPayload(source: "catch-all") {
+  return {
+    ok: true,
+    source,
+    SUPABASE_URL: Boolean(process.env.SUPABASE_URL),
+    SUPABASE_ANON_KEY: Boolean(process.env.SUPABASE_ANON_KEY),
+    SUPABASE_SERVICE_ROLE_KEY: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY),
+    DEFAULT_RESPONSAVEL_ID: Boolean(process.env.DEFAULT_RESPONSAVEL_ID),
+    VITE_SUPABASE_URL: Boolean(process.env.VITE_SUPABASE_URL),
+    VITE_SUPABASE_ANON_KEY: Boolean(process.env.VITE_SUPABASE_ANON_KEY),
+    NODE_ENV: process.env.NODE_ENV || null,
+    VERCEL_ENV: process.env.VERCEL_ENV || null,
+  };
+}
+
 export default async function handler(req: any, res: any) {
-  const method = req.method || "GET";
-  const { pathname, parts, rawUrl } = getRouteInfo(req);
-  console.log("[api router] method:", method, "url:", rawUrl, "pathname:", pathname, "parts:", parts);
-
   try {
-    if (!pathname) {
-      return json(res, 404, {
-        error: "Rota nao encontrada.",
-        details: "Path vazio no roteador da API.",
-      });
+    res.setHeader("Content-Type", "application/json; charset=utf-8");
+
+    const method = req.method || "GET";
+    const { rawUrl, pathname, parts } = getRouteInfo(req);
+    console.log("[api router] method:", method, "url:", rawUrl, "pathname:", pathname, "parts:", parts);
+
+    if (method === "GET" && pathname === "debug-env") {
+      return sendJson(res, 200, debugEnvPayload("catch-all"));
     }
 
-    if (pathname === "cadastro-publico") {
-      return method === "GET" ? handleCadastroPublico(req, res) : methodNotAllowed(res, ["GET"]);
+    if (method === "GET" && pathname === "cadastro-publico") {
+      const mod = await import("./_handlers/cadastro-publico");
+      return mod.default(req, res);
     }
 
-    if (pathname === "cadastro-config") {
-      return method === "GET" ? handleCadastroConfig(req, res) : methodNotAllowed(res, ["GET"]);
+    if (method === "GET" && pathname === "cadastro-config") {
+      const mod = await import("./_handlers/cadastro-config");
+      return mod.default(req, res);
     }
 
-    if (pathname === "pre-candidatos") {
-      return method === "GET" ? handlePreCandidatos(req, res) : methodNotAllowed(res, ["GET"]);
+    if (method === "GET" && pathname === "pre-candidatos") {
+      const mod = await import("./_handlers/pre-candidatos");
+      return mod.default(req, res);
     }
 
     if (parts[0] === "responsaveis" && parts[1] && parts.length === 2) {
-      return method === "GET"
-        ? handleResponsavel(withQuery(req, { slug: parts[1] }), res)
-        : methodNotAllowed(res, ["GET"]);
+      if (method !== "GET") return methodNotAllowed(res, ["GET"]);
+      const mod = await import("./_handlers/responsaveis/[slug]");
+      return mod.default(withQuery(req, { slug: parts[1] }), res);
     }
 
-    if (pathname === "cadastros") {
-      return method === "POST" ? handleCriarCadastro(req, res) : methodNotAllowed(res, ["POST"]);
+    if (method === "POST" && pathname === "cadastros") {
+      const mod = await import("./_handlers/cadastros");
+      return mod.default(req, res);
     }
 
-    if (pathname === "admin/me") {
-      return method === "GET" ? handleAdminMe(req, res) : methodNotAllowed(res, ["GET"]);
+    if (method === "GET" && pathname === "admin/me") {
+      const mod = await import("./_handlers/admin/me");
+      return mod.default(req, res);
     }
 
-    if (pathname === "admin/dashboard") {
-      return method === "GET" ? handleAdminDashboard(req, res) : methodNotAllowed(res, ["GET"]);
+    if (method === "GET" && pathname === "admin/dashboard") {
+      const mod = await import("./_handlers/admin/dashboard");
+      return mod.default(req, res);
     }
 
-    if (pathname === "admin/cadastros") {
-      return method === "GET" ? handleAdminCadastros(req, res) : methodNotAllowed(res, ["GET"]);
+    if (method === "GET" && pathname === "admin/cadastros") {
+      const mod = await import("./_handlers/admin/cadastros");
+      return mod.default(req, res);
     }
 
     if (parts[0] === "admin" && parts[1] === "pre-candidatos") {
       const id = parts[2];
 
-      if (!id && parts.length === 2) {
-        return method === "GET" || method === "POST"
-          ? handleAdminPreCandidatos(req, res)
-          : methodNotAllowed(res, ["GET", "POST"]);
+      if ((method === "GET" || method === "POST") && !id && parts.length === 2) {
+        const mod = await import("./_handlers/admin/pre-candidatos");
+        return mod.default(req, res);
       }
 
-      if (id && parts.length === 3) {
-        return method === "PUT"
-          ? handleAtualizarPreCandidato(withQuery(req, { id }), res)
-          : methodNotAllowed(res, ["PUT"]);
+      if (method === "PUT" && id && parts.length === 3) {
+        const mod = await import("./_handlers/admin/pre-candidatos/[id]");
+        return mod.default(withQuery(req, { id }), res);
       }
 
-      if (id && parts.length === 4 && parts[3] === "status") {
-        return method === "PATCH"
-          ? handleAtualizarStatusPreCandidato(withQuery(req, { id }), res)
-          : methodNotAllowed(res, ["PATCH"]);
+      if (method === "PATCH" && id && parts.length === 4 && parts[3] === "status") {
+        const mod = await import("./_handlers/admin/pre-candidatos/[id]/status");
+        return mod.default(withQuery(req, { id }), res);
       }
 
-      if (id && parts.length === 4 && parts[3] === "ordem") {
-        return method === "PATCH"
-          ? handleAtualizarOrdemPreCandidato(withQuery(req, { id }), res)
-          : methodNotAllowed(res, ["PATCH"]);
+      if (method === "PATCH" && id && parts.length === 4 && parts[3] === "ordem") {
+        const mod = await import("./_handlers/admin/pre-candidatos/[id]/ordem");
+        return mod.default(withQuery(req, { id }), res);
       }
     }
 
-    return json(res, 404, { error: "Rota nao encontrada." });
+    return sendJson(res, 404, {
+      error: "Rota nao encontrada.",
+      method,
+      rawUrl,
+      pathname,
+      parts,
+    });
   } catch (error) {
     const details = error instanceof Error ? error.message : String(error);
-    console.error("[api catch-all]", details);
-    return json(res, 500, {
-      error: "Erro interno do servidor.",
+    console.error("[api catch-all fatal]", details);
+    res.statusCode = 500;
+    res.setHeader("Content-Type", "application/json; charset=utf-8");
+    return res.end(JSON.stringify({
+      error: "Erro fatal no roteador da API.",
       details,
-    });
+    }));
   }
 }

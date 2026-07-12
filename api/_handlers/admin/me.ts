@@ -9,6 +9,17 @@ export default async function handler(req: any, res: any) {
 
   const start = Date.now();
   try {
+    const authHeader = req.headers.authorization ?? req.headers.Authorization;
+    if (!authHeader || Array.isArray(authHeader)) {
+      console.error("[api/admin/me] token ausente");
+      return json(res, 401, { error: "Token ausente." });
+    }
+
+    if (!authHeader.startsWith("Bearer ")) {
+      console.error("[api/admin/me] formato de token inválido");
+      return json(res, 401, { error: "Formato de token inválido." });
+    }
+
     const missing = getRequiredSupabaseEnvMissing();
     if (missing.length > 0) {
       console.error("[api/admin/me] env faltando", missing);
