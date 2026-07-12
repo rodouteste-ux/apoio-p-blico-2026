@@ -1,5 +1,5 @@
-import { handleAdminAuthError, requireAdmin } from "../_lib/admin-auth";
-import { json, methodNotAllowed } from "../_lib/http";
+import { handleAdminAuthError, requireAdmin } from "../../_lib/admin-auth";
+import { json, methodNotAllowed } from "../../_lib/http";
 
 export default async function handler(req: any, res: any) {
   if (req.method !== "GET") {

@@ -1,10 +1,10 @@
 import { z } from "zod";
 
-import { invalidateDashboardCache } from "./_lib/admin-cache";
-import { getCadastroConfig } from "./_lib/cadastro-config";
-import { getSupabaseServerClient } from "./_lib/supabase";
-import { getOriginIp, json, methodNotAllowed, readJsonBody } from "./_lib/http";
-import { normalizeCpf, normalizePhone, validateCpf } from "./_lib/personal-data";
+import { invalidateDashboardCache } from "../_lib/admin-cache";
+import { getCadastroConfig } from "../_lib/cadastro-config";
+import { getSupabaseServerClient } from "../_lib/supabase";
+import { getOriginIp, json, methodNotAllowed, readJsonBody } from "../_lib/http";
+import { normalizeCpf, normalizePhone, validateCpf } from "../_lib/personal-data";
 
 const cadastroSchema = z.object({
   nome_completo: z.string().trim().min(3),

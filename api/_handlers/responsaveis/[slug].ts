@@ -1,5 +1,5 @@
-import { getSupabaseServerClient } from "../_lib/supabase";
-import { json, methodNotAllowed } from "../_lib/http";
+import { getSupabaseServerClient } from "../../_lib/supabase";
+import { json, methodNotAllowed } from "../../_lib/http";
 
 export default async function handler(req: any, res: any) {
   if (req.method !== "GET") {

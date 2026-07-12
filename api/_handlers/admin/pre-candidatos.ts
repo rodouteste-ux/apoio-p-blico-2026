@@ -6,10 +6,10 @@ import {
   invalidateAdminCaches,
   setAdminPreCandidatosInFlight,
   setCachedAdminPreCandidatos,
-} from "../_lib/admin-cache";
-import { handleAdminAuthError, requireAdmin } from "../_lib/admin-auth";
-import { json, methodNotAllowed, readJsonBody } from "../_lib/http";
-import { getSupabaseServerClient } from "../_lib/supabase";
+} from "../../_lib/admin-cache";
+import { handleAdminAuthError, requireAdmin } from "../../_lib/admin-auth";
+import { json, methodNotAllowed, readJsonBody } from "../../_lib/http";
+import { getSupabaseServerClient } from "../../_lib/supabase";
 
 const preCandidatoSchema = z.object({
   nome: z.string().trim().min(2),

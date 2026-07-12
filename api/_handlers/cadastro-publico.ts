@@ -1,6 +1,6 @@
-import { getServerEnv } from "./_lib/env";
-import { json, methodNotAllowed } from "./_lib/http";
-import { getSupabaseServerClient } from "./_lib/supabase";
+import { getServerEnv } from "../_lib/env";
+import { json, methodNotAllowed } from "../_lib/http";
+import { getSupabaseServerClient } from "../_lib/supabase";
 
 type CadastroPublicoResponse = {
   ativo: boolean;

@@ -1,5 +1,5 @@
-import { getSupabaseServerClient } from "./_lib/supabase";
-import { json, methodNotAllowed } from "./_lib/http";
+import { getSupabaseServerClient } from "../_lib/supabase";
+import { json, methodNotAllowed } from "../_lib/http";
 
 type PublicPreCandidato = {
   id: string;

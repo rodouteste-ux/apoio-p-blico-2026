@@ -1,39 +1,31 @@
 import { z } from "zod";
 
-import { invalidateAdminCaches } from "../../_lib/admin-cache";
-import { handleAdminAuthError, requireAdmin } from "../../_lib/admin-auth";
-import { json, methodNotAllowed, readJsonBody } from "../../_lib/http";
-import { getSupabaseServerClient } from "../../_lib/supabase";
+import { invalidateAdminCaches } from "../../../../_lib/admin-cache";
+import { handleAdminAuthError, requireAdmin } from "../../../../_lib/admin-auth";
+import { json, methodNotAllowed, readJsonBody } from "../../../../_lib/http";
+import { getSupabaseServerClient } from "../../../../_lib/supabase";
 
-const updateSchema = z.object({
-  nome: z.string().trim().min(2),
-  cargo: z.string().trim().min(2),
+const statusSchema = z.object({
   ativo: z.boolean(),
-  ordem: z.number().int().min(0),
 });
 
 export default async function handler(req: any, res: any) {
-  if (req.method !== "PUT") {
-    return methodNotAllowed(res, ["PUT"]);
+  if (req.method !== "PATCH") {
+    return methodNotAllowed(res, ["PATCH"]);
   }
 
   try {
-    await requireAdmin(req, "[api/admin/pre-candidatos/[id]]");
+    await requireAdmin(req, "[api/admin/pre-candidatos/[id]/status]");
     const id = String(req.query?.id ?? "").trim();
     if (!id) {
       return json(res, 400, { error: "Pre-candidato invalido." });
     }
 
-    const body = updateSchema.parse(await readJsonBody(req));
+    const body = statusSchema.parse(await readJsonBody(req));
     const supabase = getSupabaseServerClient();
     const { data, error } = await supabase
       .from("pre_candidatos")
-      .update({
-        nome: body.nome,
-        cargo: body.cargo,
-        ativo: body.ativo,
-        ordem: body.ordem,
-      })
+      .update({ ativo: body.ativo })
       .eq("id", id)
       .select("id, nome, cargo, ativo, ordem, criado_em")
       .single();
@@ -43,14 +35,14 @@ export default async function handler(req: any, res: any) {
     return json(res, 200, data);
   } catch (error) {
     if (error instanceof Error && error.name === "AdminAuthError") {
-      return handleAdminAuthError(res, error, "/api/admin/pre-candidatos/[id]");
+      return handleAdminAuthError(res, error, "/api/admin/pre-candidatos/[id]/status");
     }
 
     if (error instanceof z.ZodError) {
       return json(res, 400, { error: "Verifique os dados informados e tente novamente." });
     }
 
-    console.error("Erro ao atualizar pre-candidato:", error);
+    console.error("Erro ao atualizar status do pre-candidato:", error);
     return json(res, 500, { error: "Erro interno ao processar solicitacao." });
   }
 }
