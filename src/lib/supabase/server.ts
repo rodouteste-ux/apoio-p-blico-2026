@@ -1,8 +1,10 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import fs from "node:fs";
 import path from "node:path";
 
-let supabaseServerClient: ReturnType<typeof createClient> | null = null;
+import type { Database } from "@/types/database";
+
+let supabaseServerClient: SupabaseClient<Database> | null = null;
 
 function readLocalEnvFile() {
   const envPath = path.resolve(process.cwd(), ".env.local");
@@ -43,12 +45,12 @@ function getServerEnv(name: "SUPABASE_URL" | "SUPABASE_SERVICE_ROLE_KEY") {
   throw new Error(`${name} nao configurada.`);
 }
 
-export function getSupabaseServerClient() {
+export function getSupabaseServerClient(): SupabaseClient<Database> {
   if (supabaseServerClient) {
     return supabaseServerClient;
   }
 
-  supabaseServerClient = createClient(getServerEnv("SUPABASE_URL"), getServerEnv("SUPABASE_SERVICE_ROLE_KEY"), {
+  supabaseServerClient = createClient<Database>(getServerEnv("SUPABASE_URL"), getServerEnv("SUPABASE_SERVICE_ROLE_KEY"), {
     auth: {
       persistSession: false,
       autoRefreshToken: false,

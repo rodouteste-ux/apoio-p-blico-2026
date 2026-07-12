@@ -1,8 +1,9 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 import { getServerEnv } from "./env";
 import { json } from "./http";
 import { getSupabaseServerClient } from "./supabase";
+import type { Database } from "../../src/types/database";
 
 export interface AdminIdentity {
   userId: string;
@@ -17,7 +18,16 @@ function logDuration(label: string, start: number) {
 }
 
 const ADMIN_CACHE_TTL_MS = 60 * 1000;
-let supabaseTokenClient: ReturnType<typeof createClient> | null = null;
+type AdminUser = {
+  id: string;
+  user_id: string;
+  email: string;
+  nome: string | null;
+  role: AdminIdentity["role"];
+  ativo: boolean;
+};
+
+let supabaseTokenClient: SupabaseClient<Database> | null = null;
 const adminProfileCache = new Map<string, { identity: AdminIdentity; expiresAt: number }>();
 
 export class AdminAuthError extends Error {
@@ -44,7 +54,7 @@ function getSupabaseTokenClient() {
     return supabaseTokenClient;
   }
 
-  supabaseTokenClient = createClient(getServerEnv("SUPABASE_URL"), getServerEnv("SUPABASE_ANON_KEY"), {
+  supabaseTokenClient = createClient<Database>(getServerEnv("SUPABASE_URL"), getServerEnv("SUPABASE_ANON_KEY"), {
     auth: {
       persistSession: false,
       autoRefreshToken: false,
@@ -72,7 +82,7 @@ async function findAdminByUserId(userId: string) {
     throw new AdminAuthError(500, "Erro interno ao validar administrador.");
   }
 
-  return result.data;
+  return result.data satisfies AdminUser | null;
 }
 
 async function findAdminByEmail(email: string) {
@@ -89,7 +99,7 @@ async function findAdminByEmail(email: string) {
     throw new AdminAuthError(500, "Erro interno ao validar administrador.");
   }
 
-  return result.data;
+  return result.data satisfies AdminUser | null;
 }
 
 export async function requireAdmin(req: any, context = "[api/admin]") {
