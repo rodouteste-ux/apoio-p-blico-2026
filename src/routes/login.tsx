@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
+import { prefetchAdminDashboard } from "@/services/cadastroService";
 import { signInAdmin } from "@/services/authService";
 import { logMeasure, startMeasure } from "@/utils/perf";
 
@@ -40,7 +41,8 @@ function LoginPage() {
     setError(null);
 
     try {
-      await signInAdmin(email, password);
+      const session = await signInAdmin(email, password);
+      prefetchAdminDashboard(session.accessToken);
       await navigate({ to: search.redirect || "/admin" });
     } catch (submitError) {
       const message = submitError instanceof Error ? submitError.message : "";

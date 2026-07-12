@@ -291,6 +291,19 @@ export async function getAdminDashboard(token: string): Promise<DashboardMetric>
   return dashboardPromise;
 }
 
+export function prefetchAdminDashboard(token: string) {
+  if (!token || (dashboardCache && dashboardCache.expiresAt > Date.now()) || dashboardPromise) {
+    return;
+  }
+
+  void getAdminDashboard(token).catch((error) => {
+    console.warn(
+      "[front] admin/dashboard prefetch=failed",
+      error instanceof Error ? error.message : String(error),
+    );
+  });
+}
+
 export async function getAdminCadastros(token: string, params: {
   search?: string;
   cidade?: string;
