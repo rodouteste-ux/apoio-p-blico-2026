@@ -75,43 +75,43 @@ export default async function handler(req: any, res: any) {
     }
 
     if (method === "GET" && pathname === "cadastro-publico") {
-      const mod = await import("./_handlers/cadastro-publico");
+      const mod = await import("./_handlers/cadastro-publico.js");
       return mod.default(req, res);
     }
 
     if (method === "GET" && pathname === "cadastro-config") {
-      const mod = await import("./_handlers/cadastro-config");
+      const mod = await import("./_handlers/cadastro-config.js");
       return mod.default(req, res);
     }
 
     if (method === "GET" && pathname === "pre-candidatos") {
-      const mod = await import("./_handlers/pre-candidatos");
+      const mod = await import("./_handlers/pre-candidatos.js");
       return mod.default(req, res);
     }
 
     if (parts[0] === "responsaveis" && parts[1] && parts.length === 2) {
       if (method !== "GET") return methodNotAllowed(res, ["GET"]);
-      const mod = await import("./_handlers/responsaveis/[slug]");
+      const mod = await import("./_handlers/responsaveis/[slug].js");
       return mod.default(withQuery(req, { slug: parts[1] }), res);
     }
 
     if (method === "POST" && pathname === "cadastros") {
-      const mod = await import("./_handlers/cadastros");
+      const mod = await import("./_handlers/cadastros.js");
       return mod.default(req, res);
     }
 
     if (method === "GET" && pathname === "admin/me") {
-      const mod = await import("./_handlers/admin/me");
+      const mod = await import("./_handlers/admin/me.js");
       return mod.default(req, res);
     }
 
     if (method === "GET" && pathname === "admin/dashboard") {
-      const mod = await import("./_handlers/admin/dashboard");
+      const mod = await import("./_handlers/admin/dashboard.js");
       return mod.default(req, res);
     }
 
     if (method === "GET" && pathname === "admin/cadastros") {
-      const mod = await import("./_handlers/admin/cadastros");
+      const mod = await import("./_handlers/admin/cadastros.js");
       return mod.default(req, res);
     }
 
@@ -119,22 +119,22 @@ export default async function handler(req: any, res: any) {
       const id = parts[2];
 
       if ((method === "GET" || method === "POST") && !id && parts.length === 2) {
-        const mod = await import("./_handlers/admin/pre-candidatos");
+        const mod = await import("./_handlers/admin/pre-candidatos.js");
         return mod.default(req, res);
       }
 
       if (method === "PUT" && id && parts.length === 3) {
-        const mod = await import("./_handlers/admin/pre-candidatos/[id]");
+        const mod = await import("./_handlers/admin/pre-candidatos/[id].js");
         return mod.default(withQuery(req, { id }), res);
       }
 
       if (method === "PATCH" && id && parts.length === 4 && parts[3] === "status") {
-        const mod = await import("./_handlers/admin/pre-candidatos/[id]/status");
+        const mod = await import("./_handlers/admin/pre-candidatos/[id]/status.js");
         return mod.default(withQuery(req, { id }), res);
       }
 
       if (method === "PATCH" && id && parts.length === 4 && parts[3] === "ordem") {
-        const mod = await import("./_handlers/admin/pre-candidatos/[id]/ordem");
+        const mod = await import("./_handlers/admin/pre-candidatos/[id]/ordem.js");
         return mod.default(withQuery(req, { id }), res);
       }
     }
