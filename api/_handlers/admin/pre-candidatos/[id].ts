@@ -1,9 +1,9 @@
 import { z } from "zod";
 
-import { invalidateAdminCaches } from "../../../_lib/admin-cache";
-import { handleAdminAuthError, requireAdmin } from "../../../_lib/admin-auth";
-import { json, methodNotAllowed, readJsonBody } from "../../../_lib/http";
-import { getSupabaseServerClient } from "../../../_lib/supabase";
+import { invalidateAdminCaches } from "../../../_lib/admin-cache.js";
+import { handleAdminAuthError, requireAdmin } from "../../../_lib/admin-auth.js";
+import { json, methodNotAllowed, readJsonBody } from "../../../_lib/http.js";
+import { getSupabaseServerClient } from "../../../_lib/supabase.js";
 
 const updateSchema = z.object({
   nome: z.string().trim().min(2),

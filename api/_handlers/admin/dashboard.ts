@@ -1,13 +1,13 @@
-import { handleAdminAuthError, requireAdmin } from "../../_lib/admin-auth";
+import { handleAdminAuthError, requireAdmin } from "../../_lib/admin-auth.js";
 import {
   getCachedDashboard,
   getDashboardInFlight,
   setCachedDashboard,
   setDashboardInFlight,
-} from "../../_lib/admin-cache";
-import { getSupabaseServerClient } from "../../_lib/supabase";
-import { formatPhone, maskCpf } from "../../_lib/personal-data";
-import { json, methodNotAllowed } from "../../_lib/http";
+} from "../../_lib/admin-cache.js";
+import { getSupabaseServerClient } from "../../_lib/supabase.js";
+import { formatPhone, maskCpf } from "../../_lib/personal-data.js";
+import { json, methodNotAllowed } from "../../_lib/http.js";
 
 async function loadDashboardMetrics(supabase: ReturnType<typeof getSupabaseServerClient>, startOfDayUtc: string) {
   const countsStart = Date.now();

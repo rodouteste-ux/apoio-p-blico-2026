@@ -1,5 +1,5 @@
-import { getSupabaseServerClient } from "./supabase";
-import { getServerEnv } from "./env";
+import { getSupabaseServerClient } from "./supabase.js";
+import { getServerEnv } from "./env.js";
 
 function getDefaultResponsavelId() {
   try {

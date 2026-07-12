@@ -1,7 +1,7 @@
-import { handleAdminAuthError, requireAdmin } from "../../_lib/admin-auth";
-import { getSupabaseServerClient } from "../../_lib/supabase";
-import { formatPhone, maskCpf } from "../../_lib/personal-data";
-import { json, methodNotAllowed, parsePositiveInt } from "../../_lib/http";
+import { handleAdminAuthError, requireAdmin } from "../../_lib/admin-auth.js";
+import { getSupabaseServerClient } from "../../_lib/supabase.js";
+import { formatPhone, maskCpf } from "../../_lib/personal-data.js";
+import { json, methodNotAllowed, parsePositiveInt } from "../../_lib/http.js";
 
 export default async function handler(req: any, res: any) {
   if (req.method !== "GET") {

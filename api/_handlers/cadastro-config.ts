@@ -1,6 +1,6 @@
-import { getServerEnv } from "../_lib/env";
-import { json, methodNotAllowed } from "../_lib/http";
-import { getSupabaseServerClient } from "../_lib/supabase";
+import { getServerEnv } from "../_lib/env.js";
+import { json, methodNotAllowed } from "../_lib/http.js";
+import { getSupabaseServerClient } from "../_lib/supabase.js";
 
 let cachedResponse: { ativo: boolean; expiresAt: number } | null = null;
 const CACHE_TTL_MS = 60 * 1000;

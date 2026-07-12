@@ -1,6 +1,6 @@
-import { handleAdminAuthError, requireAdmin } from "../../_lib/admin-auth";
-import { getRequiredSupabaseEnvMissing } from "../../_lib/env";
-import { json, methodNotAllowed } from "../../_lib/http";
+import { handleAdminAuthError, requireAdmin } from "../../_lib/admin-auth.js";
+import { getRequiredSupabaseEnvMissing } from "../../_lib/env.js";
+import { json, methodNotAllowed } from "../../_lib/http.js";
 
 export default async function handler(req: any, res: any) {
   if (req.method !== "GET") {

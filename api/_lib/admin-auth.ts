@@ -1,8 +1,8 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-import { getSupabaseEnv } from "./env";
-import { json } from "./http";
-import { getSupabaseServerClient } from "./supabase";
+import { getSupabaseEnv } from "./env.js";
+import { json } from "./http.js";
+import { getSupabaseServerClient } from "./supabase.js";
 import type { Database } from "../../src/types/database";
 
 export interface AdminIdentity {
