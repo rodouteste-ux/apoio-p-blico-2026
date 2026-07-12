@@ -1,5 +1,11 @@
 export function json(res: any, status: number, payload: unknown) {
-  res.status(status).json(payload);
+  if (typeof res.status === "function" && typeof res.json === "function") {
+    return res.status(status).json(payload);
+  }
+
+  res.statusCode = status;
+  res.setHeader("Content-Type", "application/json; charset=utf-8");
+  return res.end(JSON.stringify(payload));
 }
 
 export function methodNotAllowed(res: any, methods: string[]) {
@@ -24,6 +30,8 @@ export async function readJsonBody(req: any) {
   if (chunks.length === 0) return {};
   return JSON.parse(Buffer.concat(chunks).toString("utf-8"));
 }
+
+export const readJson = readJsonBody;
 
 export function getOriginIp(req: any): string | null {
   const forwarded = req.headers["x-forwarded-for"];

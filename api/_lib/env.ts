@@ -48,6 +48,34 @@ export function getServerEnv(name: string) {
   throw new Error(`${name} nao configurada`);
 }
 
+export function getSupabaseEnv() {
+  const missing = getRequiredSupabaseEnvMissing();
+  if (missing.length > 0) {
+    return {
+      ok: false as const,
+      missing,
+    };
+  }
+
+  return {
+    ok: true as const,
+    env: {
+      SUPABASE_URL: getServerEnv("SUPABASE_URL"),
+      SUPABASE_ANON_KEY: getServerEnv("SUPABASE_ANON_KEY"),
+      SUPABASE_SERVICE_ROLE_KEY: getServerEnv("SUPABASE_SERVICE_ROLE_KEY"),
+      DEFAULT_RESPONSAVEL_ID: getOptionalServerEnv("DEFAULT_RESPONSAVEL_ID"),
+    },
+  };
+}
+
+export function getOptionalServerEnv(name: string) {
+  try {
+    return getServerEnv(name);
+  } catch {
+    return "";
+  }
+}
+
 export function getMissingServerEnvs(names: string[]) {
   return names.filter((name) => {
     try {

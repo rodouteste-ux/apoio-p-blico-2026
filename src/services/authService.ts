@@ -15,6 +15,7 @@ let sessionLoadPromise: Promise<AdminSession | null> | null = null;
 interface AdminMeResponse {
   user: {
     id: string;
+    user_id?: string;
     email: string;
     nome?: string | null;
     role: "super_admin" | "admin" | "visualizador";
@@ -26,7 +27,7 @@ function mapSession(session: Session, profile: AdminMeResponse): AdminSession {
   return {
     accessToken: session.access_token,
     email: profile.user.email,
-    userId: profile.user.id,
+    userId: profile.user.user_id ?? profile.user.id,
     role: profile.user.role,
     nome: profile.user.nome,
   };
@@ -74,6 +75,10 @@ async function fetchAdminProfile(accessToken: string) {
     const text = await response.text();
     const payload = text ? (JSON.parse(text) as AdminMeResponse & { error?: string }) : null;
     if (!response.ok) {
+      if (response.status >= 500) {
+        console.error("[front] /api/admin/me erro servidor", payload);
+      }
+
       const error = new Error(payload?.error ?? "Nao foi possivel validar o acesso administrativo.");
       (error as Error & { status?: number }).status = response.status;
       throw error;
@@ -124,15 +129,13 @@ export async function signInAdmin(email: string, password: string) {
   const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
   if (error || !data.session) {
     const signInError = new Error(
-      toFriendlySignInMessage(
-        error
-          ? {
-              message: error.message,
-              status: error.status,
-              code: "code" in error && typeof error.code === "string" ? error.code : undefined,
-            }
-          : null,
-      ),
+      error
+        ? toFriendlySignInMessage({
+            message: error.message,
+            status: error.status,
+            code: "code" in error && typeof error.code === "string" ? error.code : undefined,
+          })
+        : "Não foi possível iniciar sessão.",
     );
     (signInError as Error & { status?: number }).status = 401;
     throw signInError;

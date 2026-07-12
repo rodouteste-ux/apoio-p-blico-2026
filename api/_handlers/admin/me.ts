@@ -25,7 +25,8 @@ export default async function handler(req: any, res: any) {
     const jsonStart = Date.now();
     const payload = {
       user: {
-        id: admin.userId,
+        id: admin.adminId,
+        user_id: admin.userId,
         email: admin.email,
         nome: admin.nome,
         role: admin.role,

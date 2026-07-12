@@ -1,4 +1,4 @@
-import { getRequiredSupabaseEnvMissing, getServerEnv } from "../_lib/env";
+import { getSupabaseEnv } from "../_lib/env";
 import { json, methodNotAllowed } from "../_lib/http";
 import { getSupabaseServerClient } from "../_lib/supabase";
 
@@ -28,11 +28,8 @@ class CadastroPublicoError extends Error {
 }
 
 function getDefaultResponsavelId() {
-  try {
-    return getServerEnv("DEFAULT_RESPONSAVEL_ID").replace(/^['"]|['"]$/g, "").trim();
-  } catch {
-    return "";
-  }
+  const envResult = getSupabaseEnv();
+  return envResult.ok ? envResult.env.DEFAULT_RESPONSAVEL_ID.trim() : "";
 }
 
 export default async function handler(req: any, res: any) {
@@ -44,12 +41,12 @@ export default async function handler(req: any, res: any) {
   try {
     res.setHeader("Cache-Control", "public, s-maxage=60, stale-while-revalidate=300");
 
-    const missing = getRequiredSupabaseEnvMissing();
-    if (missing.length > 0) {
-      console.error("[api/cadastro-publico] env faltando", missing);
+    const envResult = getSupabaseEnv();
+    if (!envResult.ok) {
+      console.error("[api/cadastro-publico] env faltando", envResult.missing);
       return json(res, 500, {
         error: "Configuração do servidor incompleta.",
-        missing,
+        missing: envResult.missing,
       });
     }
 
@@ -70,8 +67,12 @@ export default async function handler(req: any, res: any) {
       return json(res, error.status, error.payload);
     }
 
-    console.error("[api/cadastro-publico] erro inesperado", error instanceof Error ? error.message : error);
-    return json(res, 500, { error: "Erro ao carregar configuração pública." });
+    const details = error instanceof Error ? error.message : String(error);
+    console.error("[api/cadastro-publico] erro inesperado", details);
+    return json(res, 500, {
+      error: "Erro interno ao carregar cadastro público.",
+      details,
+    });
   } finally {
     inFlight = null;
     console.log("[api/cadastro-publico] total:", Date.now() - start, "ms");
@@ -84,36 +85,41 @@ async function loadCadastroPublico() {
   console.log("[api/cadastro-publico] criar client:", Date.now() - clientStart, "ms");
 
   const defaultResponsavelId = getDefaultResponsavelId();
-  let responsavelQuery = supabase.from("responsaveis").select("id").eq("ativo", true);
+  let responsavelQuery = supabase.from("responsaveis").select("id, nome, ativo").eq("ativo", true);
 
   if (defaultResponsavelId) {
     responsavelQuery = responsavelQuery.eq("id", defaultResponsavelId);
   }
 
   const queriesStart = Date.now();
-  const [responsavelResult, preCandidatosResult] = await Promise.all([
-    responsavelQuery.limit(1).maybeSingle(),
-    supabase
-      .from("pre_candidatos")
-      .select("id, nome, cargo, ordem")
-      .eq("ativo", true)
-      .order("ordem", { ascending: true }),
-  ]);
-  console.log("[api/cadastro-publico] queries supabase:", Date.now() - queriesStart, "ms");
+  const responsavelResult = await responsavelQuery.limit(1).maybeSingle();
 
   if (responsavelResult.error) {
     console.error("[api/cadastro-publico] supabase error", responsavelResult.error.message);
-    throw new CadastroPublicoError(500, { error: "Erro ao carregar configuração pública." });
-  }
-
-  if (preCandidatosResult.error) {
-    console.error("[api/cadastro-publico] supabase error", preCandidatosResult.error.message);
-    throw new CadastroPublicoError(500, { error: "Erro ao carregar configuração pública." });
+    throw new CadastroPublicoError(500, {
+      error: "Erro ao carregar responsável padrão.",
+      details: responsavelResult.error.message,
+    });
   }
 
   if (!responsavelResult.data) {
     console.error("[api/cadastro-publico] responsável não encontrado");
     throw new CadastroPublicoError(500, { error: "Nenhum responsável ativo configurado." });
+  }
+
+  const preCandidatosResult = await supabase
+    .from("pre_candidatos")
+    .select("id, nome, cargo, ordem")
+    .eq("ativo", true)
+    .order("ordem", { ascending: true });
+  console.log("[api/cadastro-publico] queries supabase:", Date.now() - queriesStart, "ms");
+
+  if (preCandidatosResult.error) {
+    console.error("[api/cadastro-publico] supabase error", preCandidatosResult.error.message);
+    throw new CadastroPublicoError(500, {
+      error: "Erro ao carregar pré-candidatos.",
+      details: preCandidatosResult.error.message,
+    });
   }
 
   const jsonStart = Date.now();

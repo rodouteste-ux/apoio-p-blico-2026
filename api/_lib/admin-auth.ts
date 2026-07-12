@@ -1,11 +1,12 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
-import { getServerEnv } from "./env";
+import { getSupabaseEnv } from "./env";
 import { json } from "./http";
 import { getSupabaseServerClient } from "./supabase";
 import type { Database } from "../../src/types/database";
 
 export interface AdminIdentity {
+  adminId: string;
   userId: string;
   email: string;
   nome?: string | null;
@@ -32,21 +33,35 @@ const adminProfileCache = new Map<string, { identity: AdminIdentity; expiresAt: 
 
 export class AdminAuthError extends Error {
   status: number;
+  details?: string;
 
-  constructor(status: number, message: string) {
+  constructor(status: number, message: string, details?: string) {
     super(message);
     this.name = "AdminAuthError";
     this.status = status;
+    this.details = details;
   }
 }
 
-function getBearerToken(req: any) {
+function getBearerToken(req: any, context: string) {
   const header = req.headers.authorization ?? req.headers.Authorization;
-  if (!header || typeof header !== "string" || !header.startsWith("Bearer ")) {
-    return null;
+  if (!header || typeof header !== "string") {
+    console.error(`${context} token ausente`);
+    throw new AdminAuthError(401, "Token ausente.");
   }
 
-  return header.slice("Bearer ".length).trim();
+  if (!header.startsWith("Bearer ")) {
+    console.error(`${context} formato de token inválido`);
+    throw new AdminAuthError(401, "Formato de token inválido.");
+  }
+
+  const token = header.slice("Bearer ".length).trim();
+  if (!token) {
+    console.error(`${context} token ausente`);
+    throw new AdminAuthError(401, "Token ausente.");
+  }
+
+  return token;
 }
 
 function getSupabaseTokenClient() {
@@ -54,7 +69,12 @@ function getSupabaseTokenClient() {
     return supabaseTokenClient;
   }
 
-  supabaseTokenClient = createClient<Database>(getServerEnv("SUPABASE_URL"), getServerEnv("SUPABASE_ANON_KEY"), {
+  const envResult = getSupabaseEnv();
+  if (!envResult.ok) {
+    throw new AdminAuthError(500, "Configuração do servidor incompleta.", envResult.missing.join(", "));
+  }
+
+  supabaseTokenClient = createClient<Database>(envResult.env.SUPABASE_URL, envResult.env.SUPABASE_ANON_KEY, {
     auth: {
       persistSession: false,
       autoRefreshToken: false,
@@ -79,7 +99,7 @@ async function findAdminByUserId(userId: string, context: string) {
 
   if (result.error) {
     console.error(`${context} supabase error`, result.error.message);
-    throw new AdminAuthError(500, "Erro interno ao validar administrador.");
+    throw new AdminAuthError(500, "Erro ao buscar administrador.", result.error.message);
   }
 
   return result.data satisfies AdminUser | null;
@@ -96,7 +116,7 @@ async function findAdminByEmail(email: string, context: string) {
 
   if (result.error) {
     console.error(`${context} supabase error`, result.error.message);
-    throw new AdminAuthError(500, "Erro interno ao validar administrador.");
+    throw new AdminAuthError(500, "Erro ao buscar administrador.", result.error.message);
   }
 
   return result.data satisfies AdminUser | null;
@@ -104,11 +124,7 @@ async function findAdminByEmail(email: string, context: string) {
 
 export async function requireAdmin(req: any, context = "[api/admin]") {
   const totalStart = Date.now();
-  const token = getBearerToken(req);
-  if (!token) {
-    console.error(`${context} token ausente`);
-    throw new AdminAuthError(401, "Token de autenticacao nao informado.");
-  }
+  const token = getBearerToken(req, context);
 
   const tokenStart = Date.now();
   const { data, error } = await validateUserToken(token);
@@ -117,8 +133,8 @@ export async function requireAdmin(req: any, context = "[api/admin]") {
   console.log("[requireAdmin] getUser:", getUserMs, "ms");
 
   if (error || !data.user?.id || !data.user.email) {
-    console.error(`${context} supabase error`, error?.message ?? "usuario ausente");
-    throw new AdminAuthError(401, "Sessao invalida ou expirada.");
+    console.error(`${context} token inválido`, error?.message ?? "usuario ausente");
+    throw new AdminAuthError(401, "Token inválido ou expirado.");
   }
 
   const cached = adminProfileCache.get(data.user.id);
@@ -147,16 +163,17 @@ export async function requireAdmin(req: any, context = "[api/admin]") {
   }
 
   if (!adminUser) {
-    console.error(`${context} usuário sem permissão`);
-    throw new AdminAuthError(403, "Usuario sem permissao para acessar o painel administrativo.");
+    console.error(`${context} usuário sem permissão`, data.user.email);
+    throw new AdminAuthError(403, "Usuário sem permissão administrativa.");
   }
 
   if (!adminUser.ativo) {
-    console.error(`${context} usuário sem permissão`);
-    throw new AdminAuthError(403, "Usuario sem permissao para acessar o painel administrativo.");
+    console.error(`${context} usuário sem permissão`, data.user.email);
+    throw new AdminAuthError(403, "Administrador inativo.");
   }
 
   const identity = {
+    adminId: adminUser.id,
     userId: adminUser.user_id,
     email: adminUser.email,
     nome: adminUser.nome,
@@ -172,9 +189,18 @@ export async function requireAdmin(req: any, context = "[api/admin]") {
 
 export function handleAdminAuthError(res: any, error: unknown, context: string) {
   if (error instanceof AdminAuthError) {
-    return json(res, error.status, { error: error.message });
+    const payload: { error: string; details?: string } = { error: error.message };
+    if (error.details) {
+      payload.details = error.details;
+    }
+
+    return json(res, error.status, payload);
   }
 
-  console.error(`Erro em ${context}:`, error);
-  return json(res, 500, { error: "Erro interno ao validar administrador." });
+  const details = error instanceof Error ? error.message : String(error);
+  console.error(`Erro em ${context}:`, details);
+  return json(res, 500, {
+    error: "Erro interno ao validar administrador.",
+    details,
+  });
 }

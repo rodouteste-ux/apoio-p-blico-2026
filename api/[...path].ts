@@ -18,27 +18,44 @@ type ApiRequest = {
   query?: Record<string, unknown>;
 };
 
-function getPathParts(req: ApiRequest) {
+function getRouteInfo(req: ApiRequest) {
   const url = new URL(req.url || "/api", "http://localhost");
   const pathFromUrl = url.pathname.replace(/^\/api\/?/, "");
   if (pathFromUrl && !pathFromUrl.startsWith("[...path]")) {
-    return pathFromUrl
-      .split("/")
-      .filter(Boolean)
-      .map((part) => decodeURIComponent(part));
+    const parts = pathFromUrl.split("/").filter(Boolean).map((part) => decodeURIComponent(part));
+    return {
+      pathname: parts.join("/"),
+      parts,
+      rawUrl: req.url || "",
+    };
   }
 
   const rawPath = req.query?.path;
   if (Array.isArray(rawPath)) {
-    return rawPath.map((part) => String(part)).filter(Boolean);
+    const parts = rawPath.map((part) => String(part)).filter(Boolean);
+    return {
+      pathname: parts.join("/"),
+      parts,
+      rawUrl: req.url || "",
+    };
   }
 
   if (typeof rawPath === "string" && rawPath) {
-    return rawPath.split("/").filter(Boolean);
+    const parts = rawPath.split("/").filter(Boolean);
+    return {
+      pathname: parts.join("/"),
+      parts,
+      rawUrl: req.url || "",
+    };
   }
 
   const pathParam = url.searchParams.get("path") ?? "";
-  return pathParam.split("/").filter(Boolean);
+  const parts = pathParam.split("/").filter(Boolean);
+  return {
+    pathname: parts.join("/"),
+    parts,
+    rawUrl: req.url || "",
+  };
 }
 
 function withQuery(req: any, params: Record<string, string>) {
@@ -51,10 +68,17 @@ function withQuery(req: any, params: Record<string, string>) {
 
 export default async function handler(req: any, res: any) {
   const method = req.method || "GET";
-  const parts = getPathParts(req);
-  const pathname = parts.join("/");
+  const { pathname, parts, rawUrl } = getRouteInfo(req);
+  console.log("[api router] method:", method, "url:", rawUrl, "pathname:", pathname, "parts:", parts);
 
   try {
+    if (!pathname) {
+      return json(res, 404, {
+        error: "Rota nao encontrada.",
+        details: "Path vazio no roteador da API.",
+      });
+    }
+
     if (pathname === "cadastro-publico") {
       return method === "GET" ? handleCadastroPublico(req, res) : methodNotAllowed(res, ["GET"]);
     }
@@ -119,7 +143,11 @@ export default async function handler(req: any, res: any) {
 
     return json(res, 404, { error: "Rota nao encontrada." });
   } catch (error) {
-    console.error("[api catch-all]", error);
-    return json(res, 500, { error: "Erro interno do servidor." });
+    const details = error instanceof Error ? error.message : String(error);
+    console.error("[api catch-all]", details);
+    return json(res, 500, {
+      error: "Erro interno do servidor.",
+      details,
+    });
   }
 }

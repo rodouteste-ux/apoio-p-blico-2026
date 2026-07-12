@@ -19,7 +19,7 @@ npm install
 
 ## Variaveis de ambiente
 
-Use o arquivo `.env.example` como base:
+Configure estas variaveis localmente e na Vercel:
 
 ```env
 VITE_API_URL=
@@ -29,6 +29,7 @@ VITE_SUPABASE_ANON_KEY=
 SUPABASE_URL=
 SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
+DEFAULT_RESPONSAVEL_ID=
 ```
 
 Explicacao:
@@ -38,6 +39,7 @@ Explicacao:
 - `SUPABASE_SERVICE_ROLE_KEY` nunca vai para o front-end.
 - `SUPABASE_SERVICE_ROLE_KEY` nunca deve usar prefixo `VITE_`.
 - `.env.local` nunca deve ser commitado.
+- `DEFAULT_RESPONSAVEL_ID` e opcional. Se ficar vazio, o backend usa o primeiro responsavel ativo.
 
 ## Rodar localmente
 
@@ -70,6 +72,21 @@ Para `vercel dev`:
 6. Execute [`supabase/dashboard_rpc.sql`](./supabase/dashboard_rpc.sql) para reduzir as chamadas do dashboard admin.
 7. Crie o usuario admin em `Authentication > Users`.
 8. Execute [`supabase/admin-example.sql`](./supabase/admin-example.sql) preenchendo o UUID e o e-mail corretos.
+9. Para diagnosticar producao, execute [`supabase/check-production.sql`](./supabase/check-production.sql).
+
+O banco precisa ter:
+
+- pelo menos 1 registro ativo em `responsaveis`
+- pelo menos 1 registro ativo em `pre_candidatos`
+- um registro em `admin_users` com `user_id` igual ao UUID do usuario em Supabase Auth
+- `admin_users.ativo = true` para liberar o painel
+
+Se alguma tabela nao existir, rode novamente:
+
+1. [`supabase/schema.sql`](./supabase/schema.sql)
+2. [`supabase/seed.sql`](./supabase/seed.sql)
+3. [`supabase/performance.sql`](./supabase/performance.sql)
+4. [`supabase/dashboard_rpc.sql`](./supabase/dashboard_rpc.sql)
 
 ## Estrutura principal
 
@@ -190,9 +207,9 @@ Fluxo esperado do login admin:
 1. Rode `npx vercel dev`.
 2. Abra `http://localhost:3000/login`.
 3. Tente um login com senha errada.
-4. A tela deve mostrar `E-mail ou senha invalidos.`.
+4. A tela deve mostrar `E-mail ou senha inválidos, ou usuário não confirmado.`.
 5. Tente um usuario nao confirmado.
-6. A tela deve mostrar `Confirme seu e-mail antes de acessar.`.
+6. A tela deve mostrar `E-mail ou senha inválidos, ou usuário não confirmado.`.
 7. Entre com o usuario criado no Supabase Auth.
 8. Se o usuario nao estiver em `admin_users`, o acesso deve ser negado.
 9. Abra `http://localhost:3000/admin`.
@@ -204,7 +221,7 @@ Fluxo esperado do login admin:
     - deve listar ativos e inativos
     - deve permitir criar, editar, ativar, desativar e alterar ordem
 12. Chame `http://localhost:3000/api/admin/me` sem token.
-    - deve retornar `401` com `Token de autenticacao nao informado.`
+    - deve retornar `401` com `Token ausente.`
 13. Chame `http://localhost:3000/api/admin/me` com token valido.
     - deve retornar o objeto `user`
 
@@ -218,9 +235,9 @@ Fluxo esperado do login admin:
 6. Reabra `/cadastro`.
 7. As alteracoes devem aparecer no formulario.
 
-## Deploy na Vercel
+## Deploy Vercel
 
-Configure na Vercel:
+Configure na Vercel exatamente com estes nomes:
 
 - `VITE_API_URL`
 - `VITE_SUPABASE_URL`
@@ -228,8 +245,29 @@ Configure na Vercel:
 - `SUPABASE_URL`
 - `SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
+- `DEFAULT_RESPONSAVEL_ID`
+
+Valores esperados:
+
+- `VITE_API_URL`: normalmente vazio, para usar a mesma origem do site
+- `VITE_SUPABASE_URL`: Project URL do Supabase
+- `SUPABASE_URL`: o mesmo Project URL do Supabase
+- `VITE_SUPABASE_ANON_KEY`: Publishable key / anon key do Supabase
+- `SUPABASE_ANON_KEY`: a mesma Publishable key / anon key
+- `SUPABASE_SERVICE_ROLE_KEY`: service_role secret do Supabase
+- `DEFAULT_RESPONSAVEL_ID`: id da tabela `responsaveis`; se vazio, usa o primeiro responsavel ativo
 
 Mantenha `SUPABASE_SERVICE_ROLE_KEY` apenas no ambiente do servidor.
+
+Cuidados importantes:
+
+- Marque as variaveis para `Production` e tambem para `Preview` se estiver testando URLs de preview.
+- Depois de alterar variaveis na Vercel, faca Redeploy.
+- Nao crie variaveis com nomes como `API URL` ou `Publishable key`; os nomes precisam ser exatamente os esperados pelo codigo.
+- Nao use `VITE_` na service role.
+- Se `/api/cadastro-publico` retornar `Configuração do servidor incompleta.`, confira a lista `missing` no JSON.
+- Se `/api/cadastro-publico` retornar `Nenhum responsável ativo configurado.`, confira `responsaveis` no Supabase.
+- Se `/api/admin/me` retornar `Usuário sem permissão administrativa.`, confira `admin_users.user_id`.
 
 ## Build
 
