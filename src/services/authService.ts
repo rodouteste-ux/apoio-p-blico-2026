@@ -35,24 +35,21 @@ function mapSession(session: Session, profile: AdminMeResponse): AdminSession {
 function toFriendlySignInMessage(error: { message?: string; status?: number; code?: string } | null) {
   const normalizedMessage = error?.message?.toLowerCase() ?? "";
   const normalizedCode = error?.code?.toLowerCase() ?? "";
+  const credentialsMessage = "E-mail ou senha inválidos, ou usuário não confirmado.";
 
   if (
+    error?.status === 400 ||
     normalizedCode.includes("invalid_credentials") ||
+    normalizedCode.includes("email_not_confirmed") ||
     normalizedMessage.includes("invalid login credentials") ||
     normalizedMessage.includes("invalid credentials") ||
+    normalizedMessage.includes("email not confirmed") ||
+    normalizedMessage.includes("confirm your email") ||
     normalizedMessage.includes("email not confirmed") === false &&
     normalizedMessage.includes("invalid") &&
     normalizedMessage.includes("credential")
   ) {
-    return "E-mail ou senha invalidos.";
-  }
-
-  if (
-    normalizedCode.includes("email_not_confirmed") ||
-    normalizedMessage.includes("email not confirmed") ||
-    normalizedMessage.includes("confirm your email")
-  ) {
-    return "Confirme seu e-mail antes de acessar.";
+    return credentialsMessage;
   }
 
   return "Nao foi possivel entrar agora. Tente novamente.";

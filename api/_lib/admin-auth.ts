@@ -68,7 +68,7 @@ async function validateUserToken(token: string) {
   return getSupabaseTokenClient().auth.getUser(token);
 }
 
-async function findAdminByUserId(userId: string) {
+async function findAdminByUserId(userId: string, context: string) {
   const supabase = getSupabaseServerClient();
 
   const result = await supabase
@@ -78,14 +78,14 @@ async function findAdminByUserId(userId: string) {
     .maybeSingle();
 
   if (result.error) {
-    console.error("Erro ao buscar admin_users:", result.error);
+    console.error(`${context} supabase error`, result.error.message);
     throw new AdminAuthError(500, "Erro interno ao validar administrador.");
   }
 
   return result.data satisfies AdminUser | null;
 }
 
-async function findAdminByEmail(email: string) {
+async function findAdminByEmail(email: string, context: string) {
   const supabase = getSupabaseServerClient();
 
   const result = await supabase
@@ -95,7 +95,7 @@ async function findAdminByEmail(email: string) {
     .maybeSingle();
 
   if (result.error) {
-    console.error("Erro ao buscar admin_users por email:", result.error);
+    console.error(`${context} supabase error`, result.error.message);
     throw new AdminAuthError(500, "Erro interno ao validar administrador.");
   }
 
@@ -106,7 +106,7 @@ export async function requireAdmin(req: any, context = "[api/admin]") {
   const totalStart = Date.now();
   const token = getBearerToken(req);
   if (!token) {
-    console.warn(`[admin auth] token ausente em ${context}`);
+    console.error(`${context} token ausente`);
     throw new AdminAuthError(401, "Token de autenticacao nao informado.");
   }
 
@@ -117,7 +117,7 @@ export async function requireAdmin(req: any, context = "[api/admin]") {
   console.log("[requireAdmin] getUser:", getUserMs, "ms");
 
   if (error || !data.user?.id || !data.user.email) {
-    console.warn("Erro ao validar token admin:", error?.message ?? "usuario ausente");
+    console.error(`${context} supabase error`, error?.message ?? "usuario ausente");
     throw new AdminAuthError(401, "Sessao invalida ou expirada.");
   }
 
@@ -133,20 +133,26 @@ export async function requireAdmin(req: any, context = "[api/admin]") {
   console.log("[requireAdmin] cache hit:", false);
 
   const adminStart = Date.now();
-  let adminUser = await findAdminByUserId(data.user.id);
+  let adminUser = await findAdminByUserId(data.user.id, context);
   const adminUsersMs = Date.now() - adminStart;
   console.log(`${context} admin_users:`, adminUsersMs, "ms");
   console.log("[requireAdmin] admin_users:", adminUsersMs, "ms");
 
   if (!adminUser) {
     const emailStart = Date.now();
-    adminUser = await findAdminByEmail(data.user.email);
+    adminUser = await findAdminByEmail(data.user.email, context);
     const emailFallbackMs = Date.now() - emailStart;
     console.log(`${context} admin_users email fallback:`, emailFallbackMs, "ms");
     console.log("[requireAdmin] admin_users email fallback:", emailFallbackMs, "ms");
   }
 
-  if (!adminUser || !adminUser.ativo) {
+  if (!adminUser) {
+    console.error(`${context} usuário sem permissão`);
+    throw new AdminAuthError(403, "Usuario sem permissao para acessar o painel administrativo.");
+  }
+
+  if (!adminUser.ativo) {
+    console.error(`${context} usuário sem permissão`);
     throw new AdminAuthError(403, "Usuario sem permissao para acessar o painel administrativo.");
   }
 

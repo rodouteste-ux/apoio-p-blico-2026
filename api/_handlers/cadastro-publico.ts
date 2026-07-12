@@ -1,4 +1,4 @@
-import { getServerEnv } from "../_lib/env";
+import { getRequiredSupabaseEnvMissing, getServerEnv } from "../_lib/env";
 import { json, methodNotAllowed } from "../_lib/http";
 import { getSupabaseServerClient } from "../_lib/supabase";
 
@@ -15,6 +15,17 @@ type CadastroPublicoResponse = {
 let cachedResponse: { data: CadastroPublicoResponse; expiresAt: number } | null = null;
 let inFlight: Promise<CadastroPublicoResponse> | null = null;
 const CACHE_TTL_MS = 60 * 1000;
+
+class CadastroPublicoError extends Error {
+  status: number;
+  payload: unknown;
+
+  constructor(status: number, payload: unknown) {
+    super("Cadastro publico error");
+    this.status = status;
+    this.payload = payload;
+  }
+}
 
 function getDefaultResponsavelId() {
   try {
@@ -33,6 +44,15 @@ export default async function handler(req: any, res: any) {
   try {
     res.setHeader("Cache-Control", "public, s-maxage=60, stale-while-revalidate=300");
 
+    const missing = getRequiredSupabaseEnvMissing();
+    if (missing.length > 0) {
+      console.error("[api/cadastro-publico] env faltando", missing);
+      return json(res, 500, {
+        error: "Configuração do servidor incompleta.",
+        missing,
+      });
+    }
+
     if (cachedResponse && cachedResponse.expiresAt > Date.now()) {
       console.log("[api/cadastro-publico] cache hit:", Date.now() - start, "ms");
       return json(res, 200, cachedResponse.data);
@@ -46,8 +66,12 @@ export default async function handler(req: any, res: any) {
     cachedResponse = { data: payload, expiresAt: Date.now() + CACHE_TTL_MS };
     return json(res, 200, payload);
   } catch (error) {
-    console.error("Erro ao carregar cadastro publico:", error);
-    return json(res, 500, { error: "Nao foi possivel carregar o cadastro publico." });
+    if (error instanceof CadastroPublicoError) {
+      return json(res, error.status, error.payload);
+    }
+
+    console.error("[api/cadastro-publico] erro inesperado", error instanceof Error ? error.message : error);
+    return json(res, 500, { error: "Erro ao carregar configuração pública." });
   } finally {
     inFlight = null;
     console.log("[api/cadastro-publico] total:", Date.now() - start, "ms");
@@ -78,16 +102,23 @@ async function loadCadastroPublico() {
   console.log("[api/cadastro-publico] queries supabase:", Date.now() - queriesStart, "ms");
 
   if (responsavelResult.error) {
-    throw responsavelResult.error;
+    console.error("[api/cadastro-publico] supabase error", responsavelResult.error.message);
+    throw new CadastroPublicoError(500, { error: "Erro ao carregar configuração pública." });
   }
 
   if (preCandidatosResult.error) {
-    throw preCandidatosResult.error;
+    console.error("[api/cadastro-publico] supabase error", preCandidatosResult.error.message);
+    throw new CadastroPublicoError(500, { error: "Erro ao carregar configuração pública." });
+  }
+
+  if (!responsavelResult.data) {
+    console.error("[api/cadastro-publico] responsável não encontrado");
+    throw new CadastroPublicoError(500, { error: "Nenhum responsável ativo configurado." });
   }
 
   const jsonStart = Date.now();
   const payload = {
-    ativo: Boolean(responsavelResult.data),
+    ativo: true,
     pre_candidatos: preCandidatosResult.data ?? [],
   };
   console.log("[api/cadastro-publico] montar json:", Date.now() - jsonStart, "ms");

@@ -14,7 +14,7 @@ function parseEnvFile(content: string) {
     if (separatorIndex === -1) continue;
 
     const key = trimmed.slice(0, separatorIndex).trim();
-    const value = trimmed.slice(separatorIndex + 1).trim();
+    const value = trimmed.slice(separatorIndex + 1).trim().replace(/^['"]|['"]$/g, "");
     result[key] = value;
   }
 
@@ -37,13 +37,31 @@ function loadLocalEnvFile() {
 export function getServerEnv(name: string) {
   const runtimeValue = process.env[name];
   if (runtimeValue && runtimeValue.trim().length > 0) {
-    return runtimeValue;
+    return runtimeValue.trim().replace(/^['"]|['"]$/g, "");
   }
 
   const localValue = loadLocalEnvFile()[name];
   if (localValue && localValue.trim().length > 0) {
-    return localValue;
+    return localValue.trim().replace(/^['"]|['"]$/g, "");
   }
 
   throw new Error(`${name} nao configurada`);
+}
+
+export function getMissingServerEnvs(names: string[]) {
+  return names.filter((name) => {
+    try {
+      return getServerEnv(name).trim().length === 0;
+    } catch {
+      return true;
+    }
+  });
+}
+
+export function getRequiredSupabaseEnvMissing() {
+  return getMissingServerEnvs([
+    "SUPABASE_URL",
+    "SUPABASE_ANON_KEY",
+    "SUPABASE_SERVICE_ROLE_KEY",
+  ]);
 }
