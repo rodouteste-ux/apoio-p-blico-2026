@@ -1,14 +1,27 @@
 import { getSupabaseServerClient } from "./supabase";
+import { getServerEnv } from "./env";
+
+function getDefaultResponsavelId() {
+  try {
+    return getServerEnv("DEFAULT_RESPONSAVEL_ID").replace(/^['"]|['"]$/g, "").trim();
+  } catch {
+    return "";
+  }
+}
 
 export async function getCadastroConfig() {
   const supabase = getSupabaseServerClient();
-  const { data, error } = await supabase
+  const defaultResponsavelId = getDefaultResponsavelId();
+  let query = supabase
     .from("responsaveis")
-    .select("id, slug")
-    .eq("ativo", true)
-    .order("criado_em", { ascending: true })
-    .limit(1)
-    .maybeSingle();
+    .select("id")
+    .eq("ativo", true);
+
+  if (defaultResponsavelId) {
+    query = query.eq("id", defaultResponsavelId);
+  }
+
+  const { data, error } = await query.limit(1).maybeSingle();
 
   if (error) {
     throw error;
@@ -17,6 +30,5 @@ export async function getCadastroConfig() {
   return {
     ativo: Boolean(data),
     responsavelId: data?.id ?? null,
-    slug: data?.slug ?? null,
   };
 }

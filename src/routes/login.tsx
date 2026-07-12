@@ -1,9 +1,10 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
 import { signInAdmin } from "@/services/authService";
+import { logMeasure, startMeasure } from "@/utils/perf";
 
 const searchSchema = {
   parse: (search: Record<string, unknown>) => ({
@@ -25,8 +26,16 @@ function LoginPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    const start = startMeasure();
+    requestAnimationFrame(() => logMeasure("[front] carregamento login", start));
+  }, []);
+
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (submitting) return;
+
+    const start = startMeasure();
     setSubmitting(true);
     setError(null);
 
@@ -39,6 +48,7 @@ function LoginPage() {
         message || "Nao foi possivel entrar. Verifique suas credenciais e permissao de acesso.",
       );
     } finally {
+      logMeasure("[front] login admin", start);
       setSubmitting(false);
     }
   }

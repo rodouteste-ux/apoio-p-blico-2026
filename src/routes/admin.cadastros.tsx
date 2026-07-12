@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
@@ -6,15 +6,23 @@ import { CadastroMobileCard } from "@/components/admin/CadastroMobileCard";
 import { CadastrosTable } from "@/components/admin/CadastrosTable";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
-import { buscarCadastros } from "@/services/cadastroService";
+import { useRequiredAdminSession } from "@/contexts/admin-session";
+import { cidades as cidadesOptions } from "@/data/cidades";
+import { ApiError } from "@/services/api";
+import { signOutAdmin } from "@/services/authService";
+import { getAdminCadastros } from "@/services/cadastroService";
 import type { Cadastro } from "@/types/cadastro";
+import { logMeasure, startMeasure } from "@/utils/perf";
 
 export const Route = createFileRoute("/admin/cadastros")({
   component: AdminCadastros,
 });
 
 function AdminCadastros() {
+  const navigate = useNavigate();
+  const adminSession = useRequiredAdminSession();
   const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [cidadeFilter, setCidadeFilter] = useState<string>("todas");
   const [cadastros, setCadastros] = useState<Cadastro[]>([]);
   const [total, setTotal] = useState(0);
@@ -25,13 +33,37 @@ function AdminCadastros() {
   const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
+    const timer = window.setTimeout(() => {
+      const nextQuery = query.trim();
+      setDebouncedQuery((current) => (current === nextQuery ? current : nextQuery));
+      setPage((current) => (current === 1 ? current : 1));
+    }, 400);
+
+    return () => window.clearTimeout(timer);
+  }, [query]);
+
+  const queryKey = useMemo(() => {
+    const searchParams = new URLSearchParams();
+    searchParams.set("page", String(page));
+    searchParams.set("limit", "20");
+    if (debouncedQuery) searchParams.set("search", debouncedQuery);
+    if (cidadeFilter !== "todas") searchParams.set("cidade", cidadeFilter);
+    return searchParams.toString();
+  }, [cidadeFilter, debouncedQuery, page]);
+
+  useEffect(() => {
     let active = true;
     setLoading(true);
+    const start = startMeasure();
 
-    const timer = window.setTimeout(async () => {
+    async function loadCadastros() {
       try {
-        const response = await buscarCadastros({
-          search: query,
+        if (!adminSession.accessToken) {
+          throw new ApiError("Sessao expirada. Faca login novamente.", 401);
+        }
+
+        const response = await getAdminCadastros(adminSession.accessToken, {
+          search: debouncedQuery,
           cidade: cidadeFilter,
           page,
           limit: 20,
@@ -43,29 +75,32 @@ function AdminCadastros() {
         setTotal(response.total);
         setTotalPages(response.totalPages);
         setError(null);
-      } catch {
+      } catch (loadError) {
         if (!active) return;
+        if (loadError instanceof ApiError && loadError.status === 401) {
+          await signOutAdmin();
+          await navigate({ to: "/login", search: { redirect: "/admin/cadastros", reason: "auth" } });
+          return;
+        }
         setError("Nao foi possivel carregar os cadastros.");
       } finally {
         if (active) {
           setLoading(false);
+          logMeasure("[front] carregamento lista cadastros", start);
         }
       }
-    }, 350);
+    }
+
+    void loadCadastros();
 
     return () => {
       active = false;
-      window.clearTimeout(timer);
     };
-  }, [cidadeFilter, page, query, retryKey]);
-
-  useEffect(() => {
-    setPage(1);
-  }, [cidadeFilter, query]);
+  }, [adminSession.accessToken, navigate, queryKey, retryKey]);
 
   const cidades = useMemo(
-    () => ["todas", ...Array.from(new Set(cadastros.map((cadastro) => cadastro.cidade)))],
-    [cadastros],
+    () => ["todas", ...cidadesOptions],
+    [],
   );
 
   return (
@@ -103,7 +138,10 @@ function AdminCadastros() {
         </div>
         <select
           value={cidadeFilter}
-          onChange={(event) => setCidadeFilter(event.target.value)}
+          onChange={(event) => {
+            setCidadeFilter(event.target.value);
+            setPage(1);
+          }}
           className="h-11 rounded-lg border border-border bg-white px-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15"
         >
           {cidades.map((cidade) => (

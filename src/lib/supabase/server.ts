@@ -2,6 +2,8 @@ import { createClient } from "@supabase/supabase-js";
 import fs from "node:fs";
 import path from "node:path";
 
+let supabaseServerClient: ReturnType<typeof createClient> | null = null;
+
 function readLocalEnvFile() {
   const envPath = path.resolve(process.cwd(), ".env.local");
   if (!fs.existsSync(envPath)) {
@@ -42,10 +44,16 @@ function getServerEnv(name: "SUPABASE_URL" | "SUPABASE_SERVICE_ROLE_KEY") {
 }
 
 export function getSupabaseServerClient() {
-  return createClient(getServerEnv("SUPABASE_URL"), getServerEnv("SUPABASE_SERVICE_ROLE_KEY"), {
+  if (supabaseServerClient) {
+    return supabaseServerClient;
+  }
+
+  supabaseServerClient = createClient(getServerEnv("SUPABASE_URL"), getServerEnv("SUPABASE_SERVICE_ROLE_KEY"), {
     auth: {
       persistSession: false,
       autoRefreshToken: false,
     },
   });
+
+  return supabaseServerClient;
 }

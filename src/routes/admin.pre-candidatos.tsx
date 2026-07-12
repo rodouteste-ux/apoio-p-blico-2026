@@ -1,10 +1,11 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Plus, RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { AdminHeader } from "@/components/admin/AdminHeader";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
+import { useRequiredAdminSession } from "@/contexts/admin-session";
 import {
   Dialog,
   DialogContent,
@@ -15,12 +16,15 @@ import {
 } from "@/components/ui/dialog";
 import type { AdminPreCandidato } from "@/types/candidato";
 import {
-  atualizarAdminPreCandidato,
-  atualizarOrdemPreCandidato,
-  atualizarStatusPreCandidato,
-  buscarAdminPreCandidatos,
-  criarAdminPreCandidato,
+  createAdminPreCandidato,
+  getAdminPreCandidatos,
+  toggleAdminPreCandidato,
+  updateAdminPreCandidato,
+  updateAdminPreCandidatoOrdem,
 } from "@/services/cadastroService";
+import { ApiError } from "@/services/api";
+import { signOutAdmin } from "@/services/authService";
+import { logMeasure, startMeasure } from "@/utils/perf";
 
 export const Route = createFileRoute("/admin/pre-candidatos")({
   component: AdminPreCandidatosPage,
@@ -42,25 +46,49 @@ const INITIAL_FORM: FormState = {
 };
 
 function AdminPreCandidatosPage() {
+  const navigate = useNavigate();
+  const adminSession = useRequiredAdminSession();
   const [items, setItems] = useState<AdminPreCandidato[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState<FormState>(INITIAL_FORM);
 
+  function requirePageToken() {
+    if (!adminSession.accessToken) {
+      throw new ApiError("Sessao expirada. Faca login novamente.", 401);
+    }
+    return adminSession.accessToken;
+  }
+
+  async function handleAuthError(error: unknown) {
+    if (error instanceof ApiError && error.status === 401) {
+      await signOutAdmin();
+      await navigate({ to: "/login", search: { redirect: "/admin/pre-candidatos", reason: "auth" } });
+      return true;
+    }
+
+    return false;
+  }
+
   async function loadItems() {
+    const start = startMeasure();
     setLoading(true);
     setError(null);
 
     try {
-      const response = await buscarAdminPreCandidatos();
+      const token = requirePageToken();
+      const response = await getAdminPreCandidatos(token);
       setItems(response);
-    } catch {
+    } catch (loadError) {
+      if (await handleAuthError(loadError)) return;
       setError("Nao foi possivel carregar os pre-candidatos.");
     } finally {
       setLoading(false);
+      logMeasure("[front] carregamento pre-candidatos admin", start);
     }
   }
 
@@ -95,18 +123,21 @@ function AdminPreCandidatosPage() {
 
     try {
       if (form.id) {
-        const updated = await atualizarAdminPreCandidato(form.id, form);
+        const token = requirePageToken();
+        const updated = await updateAdminPreCandidato(token, form.id, form);
         setItems((current) => current.map((item) => (item.id === updated.id ? updated : item)));
         setFeedback("Pre-candidato atualizado com sucesso.");
       } else {
-        const created = await criarAdminPreCandidato(form);
+        const token = requirePageToken();
+        const created = await createAdminPreCandidato(token, form);
         setItems((current) => [...current, created].sort((a, b) => a.ordem - b.ordem));
         setFeedback("Pre-candidato criado com sucesso.");
       }
 
       setModalOpen(false);
       setForm(INITIAL_FORM);
-    } catch {
+    } catch (saveError) {
+      if (await handleAuthError(saveError)) return;
       setError("Nao foi possivel salvar o pre-candidato.");
     } finally {
       setSaving(false);
@@ -114,32 +145,47 @@ function AdminPreCandidatosPage() {
   }
 
   async function handleToggle(item: AdminPreCandidato) {
+    if (actionLoadingId) return;
+    setActionLoadingId(item.id);
+    setError(null);
+
     try {
-      const updated = await atualizarStatusPreCandidato(item.id, !item.ativo);
+      const token = requirePageToken();
+      const updated = await toggleAdminPreCandidato(token, item.id, !item.ativo);
       setItems((current) => current.map((entry) => (entry.id === updated.id ? updated : entry)));
       setFeedback(
         updated.ativo
           ? "Pre-candidato ativado com sucesso."
           : "Pre-candidato desativado com sucesso.",
       );
-    } catch {
+    } catch (toggleError) {
+      if (await handleAuthError(toggleError)) return;
       setError("Nao foi possivel atualizar o status do pre-candidato.");
+    } finally {
+      setActionLoadingId(null);
     }
   }
 
   async function handleOrdemBlur(item: AdminPreCandidato, ordem: number) {
     if (Number.isNaN(ordem) || ordem === item.ordem) return;
+    if (actionLoadingId) return;
+    setActionLoadingId(item.id);
+    setError(null);
 
     try {
-      const updated = await atualizarOrdemPreCandidato(item.id, ordem);
+      const token = requirePageToken();
+      const updated = await updateAdminPreCandidatoOrdem(token, item.id, ordem);
       setItems((current) =>
         current
           .map((entry) => (entry.id === updated.id ? updated : entry))
           .sort((a, b) => a.ordem - b.ordem),
       );
       setFeedback("Ordem atualizada com sucesso.");
-    } catch {
+    } catch (ordemError) {
+      if (await handleAuthError(ordemError)) return;
       setError("Nao foi possivel atualizar a ordem do pre-candidato.");
+    } finally {
+      setActionLoadingId(null);
     }
   }
 
@@ -156,9 +202,9 @@ function AdminPreCandidatosPage() {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button type="button" variant="outline" onClick={() => void loadItems()}>
+            <Button type="button" variant="outline" disabled={loading} onClick={() => void loadItems()}>
               <RefreshCw className="h-4 w-4" />
-              Atualizar
+              {loading ? "Atualizando..." : "Atualizar"}
             </Button>
             <Button type="button" onClick={openNewModal}>
               <Plus className="h-4 w-4" />
@@ -176,6 +222,13 @@ function AdminPreCandidatosPage() {
         {error && (
           <div className="mt-4 rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive">
             <p>{error}</p>
+            <button
+              type="button"
+              onClick={() => void loadItems()}
+              className="mt-2 text-sm font-medium underline underline-offset-4"
+            >
+              Tentar novamente
+            </button>
           </div>
         )}
 
@@ -230,9 +283,14 @@ function AdminPreCandidatosPage() {
                             type="button"
                             variant={item.ativo ? "destructive" : "secondary"}
                             size="sm"
+                            disabled={actionLoadingId === item.id}
                             onClick={() => void handleToggle(item)}
                           >
-                            {item.ativo ? "Desativar" : "Ativar"}
+                            {actionLoadingId === item.id
+                              ? "Atualizando..."
+                              : item.ativo
+                                ? "Desativar"
+                                : "Ativar"}
                           </Button>
                         </div>
                       </td>
@@ -262,9 +320,14 @@ function AdminPreCandidatosPage() {
                       type="button"
                       variant={item.ativo ? "destructive" : "secondary"}
                       size="sm"
+                      disabled={actionLoadingId === item.id}
                       onClick={() => void handleToggle(item)}
                     >
-                      {item.ativo ? "Desativar" : "Ativar"}
+                      {actionLoadingId === item.id
+                        ? "Atualizando..."
+                        : item.ativo
+                          ? "Desativar"
+                          : "Ativar"}
                     </Button>
                   </div>
                   <div className="mt-3 flex gap-2">

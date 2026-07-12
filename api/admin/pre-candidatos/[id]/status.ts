@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { invalidateAdminCaches } from "../../../_lib/admin-cache";
 import { handleAdminAuthError, requireAdmin } from "../../../_lib/admin-auth";
 import { json, methodNotAllowed, readJsonBody } from "../../../_lib/http";
 import { getSupabaseServerClient } from "../../../_lib/supabase";
@@ -14,7 +15,7 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    await requireAdmin(req);
+    await requireAdmin(req, "[api/admin/pre-candidatos/[id]/status]");
     const id = String(req.query?.id ?? "").trim();
     if (!id) {
       return json(res, 400, { error: "Pre-candidato invalido." });
@@ -30,6 +31,7 @@ export default async function handler(req: any, res: any) {
       .single();
 
     if (error) throw error;
+    invalidateAdminCaches();
     return json(res, 200, data);
   } catch (error) {
     if (error instanceof Error && error.name === "AdminAuthError") {

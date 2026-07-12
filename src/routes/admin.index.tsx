@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import {
   ListChecks,
   MapPin,
@@ -8,38 +8,62 @@ import {
   UserCheck,
   Users,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 
 import { AdminHeader } from "@/components/admin/AdminHeader";
-import { ApoiosChart } from "@/components/admin/ApoiosChart";
 import { CadastroMobileCard } from "@/components/admin/CadastroMobileCard";
 import { CadastrosTable } from "@/components/admin/CadastrosTable";
 import { MetricCard } from "@/components/admin/MetricCard";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { buscarDashboard } from "@/services/cadastroService";
+import { useRequiredAdminSession } from "@/contexts/admin-session";
+import { ApiError } from "@/services/api";
+import { getAdminDashboard } from "@/services/cadastroService";
+import { signOutAdmin } from "@/services/authService";
 import type { DashboardMetric } from "@/types/cadastro";
+import { logMeasure, startMeasure } from "@/utils/perf";
 
 export const Route = createFileRoute("/admin/")({
   component: AdminDashboard,
 });
 
+const ApoiosChart = lazy(() =>
+  import("@/components/admin/ApoiosChart").then((module) => ({ default: module.ApoiosChart })),
+);
+
 function AdminDashboard() {
+  const navigate = useNavigate();
+  const adminSession = useRequiredAdminSession();
   const [dashboard, setDashboard] = useState<DashboardMetric | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [retryKey, setRetryKey] = useState(0);
 
   useEffect(() => {
     let active = true;
 
     async function loadDashboard() {
+      const start = startMeasure();
       setError(null);
 
       try {
-        const data = await buscarDashboard();
+        if (!adminSession.accessToken) {
+          throw new ApiError("Sessao expirada. Faca login novamente.", 401);
+        }
+
+        const data = await getAdminDashboard(adminSession.accessToken);
         if (!active) return;
         setDashboard(data);
-      } catch {
+      } catch (loadError) {
         if (!active) return;
+        if (loadError instanceof ApiError && loadError.status === 401) {
+          await signOutAdmin();
+          await navigate({ to: "/login", search: { redirect: "/admin", reason: "auth" } });
+          return;
+        }
         setError("Nao foi possivel carregar os dados do painel.");
+      } finally {
+        if (active) {
+          logMeasure("[front] carregamento dashboard", start);
+        }
       }
     }
 
@@ -48,7 +72,7 @@ function AdminDashboard() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [adminSession.accessToken, navigate, retryKey]);
 
   return (
     <AppLayout maxWidth="xl">
@@ -87,11 +111,21 @@ function AdminDashboard() {
 
       <div className="mt-6">
         {dashboard ? (
-          <ApoiosChart data={dashboard.apoiosPorPreCandidato} />
+          <Suspense
+            fallback={
+              <PanelMessage
+                title="Carregando ranking"
+                description="Preparando a visualizacao dos apoios por pre-candidato."
+              />
+            }
+          >
+            <ApoiosChart data={dashboard.apoiosPorPreCandidato} />
+          </Suspense>
         ) : (
           <PanelMessage
             title={error ? "Falha ao carregar ranking" : "Carregando ranking"}
             description={error ?? "Estamos preparando a distribuicao dos apoios por pre-candidato."}
+            onRetry={error ? () => setRetryKey((current) => current + 1) : undefined}
           />
         )}
       </div>
@@ -111,6 +145,7 @@ function AdminDashboard() {
           <PanelMessage
             title={error ? "Falha ao carregar cadastros" : "Carregando cadastros"}
             description={error ?? "Buscando os registros mais recentes para preencher o painel."}
+            onRetry={error ? () => setRetryKey((current) => current + 1) : undefined}
           />
         )}
 
@@ -138,11 +173,28 @@ function AdminDashboard() {
   );
 }
 
-function PanelMessage({ title, description }: { title: string; description: string }) {
+function PanelMessage({
+  title,
+  description,
+  onRetry,
+}: {
+  title: string;
+  description: string;
+  onRetry?: () => void;
+}) {
   return (
     <div className="rounded-2xl border border-dashed border-border bg-muted/20 p-6 text-center">
       <p className="text-sm font-semibold text-foreground">{title}</p>
       <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+      {onRetry && (
+        <button
+          type="button"
+          onClick={onRetry}
+          className="mt-4 inline-flex h-10 items-center justify-center rounded-lg border border-border bg-white px-4 text-sm font-medium text-foreground transition hover:border-primary/40 hover:bg-accent"
+        >
+          Tentar novamente
+        </button>
+      )}
     </div>
   );
 }

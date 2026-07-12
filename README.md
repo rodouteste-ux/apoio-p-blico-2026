@@ -66,8 +66,10 @@ Para `vercel dev`:
 2. Abra o SQL Editor.
 3. Execute [`supabase/schema.sql`](./supabase/schema.sql).
 4. Depois execute [`supabase/seed.sql`](./supabase/seed.sql).
-5. Crie o usuario admin em `Authentication > Users`.
-6. Execute [`supabase/admin-example.sql`](./supabase/admin-example.sql) preenchendo o UUID e o e-mail corretos.
+5. Execute [`supabase/performance.sql`](./supabase/performance.sql) para garantir os indices de busca, paginacao e auth.
+6. Execute [`supabase/dashboard_rpc.sql`](./supabase/dashboard_rpc.sql) para reduzir as chamadas do dashboard admin.
+7. Crie o usuario admin em `Authentication > Users`.
+8. Execute [`supabase/admin-example.sql`](./supabase/admin-example.sql) preenchendo o UUID e o e-mail corretos.
 
 ## Estrutura principal
 
@@ -84,6 +86,7 @@ Para `vercel dev`:
 
 Publicos:
 
+- `GET /api/cadastro-publico`
 - `GET /api/cadastro-config`
 - `GET /api/responsaveis/:slug`
 - `GET /api/pre-candidatos`
@@ -119,6 +122,8 @@ O schema inclui indices para melhorar performance de:
 - carregamento de apoios por `cadastro_id`
 - listagem de pre-candidatos por `ativo` e `ordem`
 - lookup administrativo por `user_id`, `email` e `ativo`
+
+Se o banco ja existe, rode [`supabase/performance.sql`](./supabase/performance.sql) no SQL Editor do Supabase. O arquivo usa `create index if not exists`, entao pode ser executado sem recriar tabelas. Rode tambem [`supabase/dashboard_rpc.sql`](./supabase/dashboard_rpc.sql) para habilitar a RPC `get_admin_dashboard_metrics`; se ela nao existir, a API usa fallback automatico.
 
 ## Como criar usuario admin
 
@@ -164,12 +169,15 @@ Fluxo esperado do login admin:
 1. Rode `npx vercel dev`.
 2. Abra `http://localhost:3000/cadastro`.
 3. Verifique se o carregamento e rapido.
-4. Confira `http://localhost:3000/api/cadastro-config`.
+4. Confira `http://localhost:3000/api/cadastro-publico`.
+   - deve retornar `{ "ativo": true, "pre_candidatos": [...] }`
+   - esta e a chamada usada pelo formulario publico
+5. Confira `http://localhost:3000/api/cadastro-config`.
    - deve retornar `{ "ativo": true }` se houver responsavel interno ativo
-5. Confira `http://localhost:3000/api/pre-candidatos`.
+6. Confira `http://localhost:3000/api/pre-candidatos`.
    - deve retornar apenas candidatos ativos, ordenados por `ordem`
-6. Envie um cadastro real.
-7. Se repetir CPF ou WhatsApp para o mesmo responsavel, a API deve retornar:
+7. Envie um cadastro real.
+8. Se repetir CPF ou WhatsApp para o mesmo responsavel, a API deve retornar:
 
 ```json
 {

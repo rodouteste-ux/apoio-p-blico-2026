@@ -1,12 +1,19 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight, LayoutGrid } from "lucide-react";
+import { useEffect } from "react";
 import { PUBLIC_CADASTRO_PATH } from "@/config/campaign";
+import { logMeasure, startMeasure } from "@/utils/perf";
 
 export const Route = createFileRoute("/")({
   component: Home,
 });
 
 function Home() {
+  useEffect(() => {
+    const start = startMeasure();
+    requestAnimationFrame(() => logMeasure("[front] carregamento home", start));
+  }, []);
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
       <div className="w-full max-w-md">

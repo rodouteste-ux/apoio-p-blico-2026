@@ -1,9 +1,11 @@
 import { Outlet, createFileRoute, useLocation, useNavigate } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
+import { AdminSessionProvider } from "@/contexts/admin-session";
 import { useAdminSession } from "@/hooks/use-admin-session";
+import { logMeasure, startMeasure } from "@/utils/perf";
 
 export const Route = createFileRoute("/admin")({
   component: AdminLayout,
@@ -13,6 +15,11 @@ function AdminLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const { session, loading, error, retry } = useAdminSession();
+  const loadStartedAt = useRef(startMeasure());
+
+  useEffect(() => {
+    if (!loading) logMeasure("[front] carregamento admin", loadStartedAt.current);
+  }, [loading]);
 
   useEffect(() => {
     if (!loading && !session && !error) {
@@ -59,5 +66,9 @@ function AdminLayout() {
     );
   }
 
-  return <Outlet />;
+  return (
+    <AdminSessionProvider value={session}>
+      <Outlet />
+    </AdminSessionProvider>
+  );
 }

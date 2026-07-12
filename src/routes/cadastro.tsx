@@ -14,12 +14,12 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { cidades } from "@/data/cidades";
 import { validateCpf } from "@/lib/personal-data";
 import {
-  buscarCadastroConfig,
-  buscarPreCandidatos,
+  buscarCadastroPublico,
   enviarCadastro,
   type PreCandidatoOption,
 } from "@/services/cadastroService";
 import { ApiError } from "@/services/api";
+import { logMeasure, startMeasure } from "@/utils/perf";
 import { maskCPF, maskWhatsapp, onlyDigits } from "@/utils/masks";
 
 export const Route = createFileRoute("/cadastro")({
@@ -62,6 +62,7 @@ function CadastroPage() {
   const [initialLoading, setInitialLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [retryKey, setRetryKey] = useState(0);
 
   const {
     register,
@@ -90,23 +91,22 @@ function CadastroPage() {
     let active = true;
 
     async function loadPageData() {
+      const start = startMeasure();
       setLoadError(null);
       setInitialLoading(true);
 
       try {
-        const [config, preCandidatos] = await Promise.all([
-          buscarCadastroConfig(),
-          buscarPreCandidatos(),
-        ]);
+        const cadastroPublico = await buscarCadastroPublico();
         if (!active) return;
-        setCadastroAtivo(config.ativo);
-        setCandidatos(preCandidatos);
+        setCadastroAtivo(cadastroPublico.ativo);
+        setCandidatos(cadastroPublico.pre_candidatos);
       } catch {
         if (!active) return;
         setLoadError("Nao foi possivel carregar as opcoes de apoio. Tente novamente.");
       } finally {
         if (active) {
           setInitialLoading(false);
+          logMeasure("[front] carregamento cadastro", start);
         }
       }
     }
@@ -116,7 +116,7 @@ function CadastroPage() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [retryKey]);
 
   const selecionados = watch("preCandidatos");
 
@@ -153,7 +153,12 @@ function CadastroPage() {
   if (loadError) {
     return (
       <AppLayout maxWidth="md">
-        <StatusCard title="Cadastro de Apoio" description={loadError} tone="error" />
+        <StatusCard
+          title="Cadastro de Apoio"
+          description={loadError}
+          tone="error"
+          onRetry={() => setRetryKey((current) => current + 1)}
+        />
       </AppLayout>
     );
   }
@@ -170,19 +175,7 @@ function CadastroPage() {
     );
   }
 
-  if (initialLoading || cadastroAtivo === null) {
-    return (
-      <AppLayout maxWidth="md">
-        <StatusCard
-          title="Carregando formulario"
-          description="Estamos preparando os dados da pre-campanha para voce."
-          tone="neutral"
-        />
-      </AppLayout>
-    );
-  }
-
-  if (candidatos.length === 0) {
+  if (!initialLoading && candidatos.length === 0) {
     return (
       <AppLayout maxWidth="md">
         <StatusCard
@@ -294,7 +287,12 @@ function CadastroPage() {
             description="Selecione os pre-candidatos que voce apoia."
           >
             <div className="grid gap-5">
-              {grupos.map((cargo) => {
+              {initialLoading &&
+                Array.from({ length: 5 }).map((_, index) => (
+                  <div key={index} className="h-16 animate-pulse rounded-xl bg-muted/40" />
+                ))}
+
+              {!initialLoading && grupos.map((cargo) => {
                 const items = candidatos.filter((candidato) => candidato.cargo === cargo);
                 if (items.length === 0) return null;
 
@@ -341,8 +339,8 @@ function CadastroPage() {
               </p>
             )}
 
-            <SubmitButton type="submit" loading={submitting}>
-              {submitting ? "Enviando..." : "Registrar apoio"}
+            <SubmitButton type="submit" loading={submitting} disabled={initialLoading}>
+              {submitting ? "Enviando..." : initialLoading ? "Carregando opcoes..." : "Registrar apoio"}
             </SubmitButton>
             <p className="mt-3 text-center text-[11px] text-muted-foreground">
               Seus dados serao utilizados exclusivamente pela equipe de campanha.
@@ -358,10 +356,12 @@ function StatusCard({
   title,
   description,
   tone,
+  onRetry,
 }: {
   title: string;
   description: string;
   tone: "neutral" | "error";
+  onRetry?: () => void;
 }) {
   return (
     <div
@@ -372,6 +372,15 @@ function StatusCard({
       <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">Sistema</p>
       <h1 className="mt-2 text-2xl font-bold tracking-tight text-foreground">{title}</h1>
       <p className="mt-2 text-sm text-muted-foreground">{description}</p>
+      {onRetry && (
+        <button
+          type="button"
+          onClick={onRetry}
+          className="mt-4 inline-flex h-10 items-center justify-center rounded-lg border border-border bg-white px-4 text-sm font-medium text-foreground transition hover:border-primary/40 hover:bg-accent"
+        >
+          Tentar novamente
+        </button>
+      )}
     </div>
   );
 }

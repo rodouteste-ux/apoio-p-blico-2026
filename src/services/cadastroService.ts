@@ -1,6 +1,7 @@
 import type { AdminPreCandidato, Cargo } from "@/types/candidato";
 import type { CadastrosResponse, DashboardMetric } from "@/types/cadastro";
 
+import { ApiError } from "./api";
 import { apiRequest } from "./api";
 
 export interface CadastroPayload {
@@ -13,7 +14,6 @@ export interface CadastroPayload {
   localVotacao: string;
   preCandidatos: string[];
   observacoes?: string;
-  responsavelSlug?: string;
 }
 
 export interface PreCandidatoOption {
@@ -77,6 +77,11 @@ interface CadastroConfigResponse {
   ativo: boolean;
 }
 
+interface CadastroPublicoApiResponse {
+  ativo: boolean;
+  pre_candidatos: PreCandidatoOption[];
+}
+
 interface AdminPreCandidatoApiItem {
   id: string;
   nome: string;
@@ -84,6 +89,48 @@ interface AdminPreCandidatoApiItem {
   ativo: boolean;
   ordem: number;
   criado_em: string;
+}
+
+const PUBLIC_CACHE_TTL_MS = 2 * 60 * 1000;
+const ADMIN_DASHBOARD_CACHE_TTL_MS = 30 * 1000;
+const ADMIN_CADASTROS_CACHE_TTL_MS = 10 * 1000;
+const ADMIN_PRE_CANDIDATOS_CACHE_TTL_MS = 60 * 1000;
+
+let cadastroConfigCache: { data: CadastroConfigResponse; expiresAt: number } | null = null;
+let cadastroConfigPromise: Promise<CadastroConfigResponse> | null = null;
+let cadastroPublicoCache: { data: CadastroPublicoApiResponse; expiresAt: number } | null = null;
+let cadastroPublicoPromise: Promise<CadastroPublicoApiResponse> | null = null;
+let preCandidatosCache: { data: PreCandidatoOption[]; expiresAt: number } | null = null;
+let preCandidatosPromise: Promise<PreCandidatoOption[]> | null = null;
+let dashboardCache: { data: DashboardMetric; expiresAt: number } | null = null;
+let dashboardPromise: Promise<DashboardMetric> | null = null;
+let adminPreCandidatosCache: { data: AdminPreCandidato[]; expiresAt: number } | null = null;
+let adminPreCandidatosPromise: Promise<AdminPreCandidato[]> | null = null;
+const cadastrosCache = new Map<string, { data: CadastrosResponse; expiresAt: number }>();
+const cadastrosInFlight = new Map<string, Promise<CadastrosResponse>>();
+
+function getAdminLogName(path: string) {
+  return path.replace(/^\/api\//, "").split("?")[0];
+}
+
+function logFrontCache(path: string, state: "hit" | "miss" | "stale") {
+  console.log(`[front] ${getAdminLogName(path)} cache=${state} tempo=0ms`);
+}
+
+function logFrontInFlight(path: string) {
+  console.log(`[front] ${getAdminLogName(path)} revalidate=skipped reason=in_flight`);
+}
+
+function logFrontRevalidate(path: string) {
+  console.log(`[front] ${getAdminLogName(path)} revalidate=started`);
+}
+
+function requireToken(token: string | null | undefined) {
+  if (!token) {
+    throw new ApiError("Sessao expirada. Faca login novamente.", 401);
+  }
+
+  return token;
 }
 
 function mapCadastro(item: CadastroApiItem) {
@@ -112,7 +159,6 @@ export async function enviarCadastro(data: CadastroPayload) {
   return apiRequest<{ success: true }>("/api/cadastros", {
     method: "POST",
     body: JSON.stringify({
-      slug: data.responsavelSlug,
       nome_completo: data.nome,
       telefone: data.whatsapp,
       cpf: data.cpf,
@@ -127,45 +173,130 @@ export async function enviarCadastro(data: CadastroPayload) {
 }
 
 export function buscarPreCandidatos() {
-  return apiRequest<PreCandidatoOption[]>("/api/pre-candidatos");
+  if (preCandidatosCache && preCandidatosCache.expiresAt > Date.now()) {
+    return Promise.resolve(preCandidatosCache.data);
+  }
+  if (preCandidatosPromise) return preCandidatosPromise;
+
+  preCandidatosPromise = apiRequest<PreCandidatoOption[]>("/api/pre-candidatos", {
+    timeoutMs: 8000,
+  })
+    .then((response) => {
+      preCandidatosCache = { data: response, expiresAt: Date.now() + PUBLIC_CACHE_TTL_MS };
+      return response;
+    })
+    .finally(() => {
+      preCandidatosPromise = null;
+    });
+
+  return preCandidatosPromise;
 }
 
 export function buscarCadastroConfig() {
-  return apiRequest<CadastroConfigResponse>("/api/cadastro-config");
+  if (cadastroConfigCache && cadastroConfigCache.expiresAt > Date.now()) {
+    return Promise.resolve(cadastroConfigCache.data);
+  }
+  if (cadastroConfigPromise) return cadastroConfigPromise;
+
+  cadastroConfigPromise = apiRequest<CadastroConfigResponse>("/api/cadastro-config", {
+    timeoutMs: 8000,
+  })
+    .then((response) => {
+      cadastroConfigCache = { data: response, expiresAt: Date.now() + PUBLIC_CACHE_TTL_MS };
+      return response;
+    })
+    .finally(() => {
+      cadastroConfigPromise = null;
+    });
+
+  return cadastroConfigPromise;
+}
+
+export function buscarCadastroPublico() {
+  if (cadastroPublicoCache && cadastroPublicoCache.expiresAt > Date.now()) {
+    return Promise.resolve(cadastroPublicoCache.data);
+  }
+  if (cadastroPublicoPromise) return cadastroPublicoPromise;
+
+  cadastroPublicoPromise = apiRequest<CadastroPublicoApiResponse>("/api/cadastro-publico", {
+    timeoutMs: 8000,
+  })
+    .then((response) => {
+      cadastroPublicoCache = { data: response, expiresAt: Date.now() + PUBLIC_CACHE_TTL_MS };
+      cadastroConfigCache = {
+        data: { ativo: response.ativo },
+        expiresAt: Date.now() + PUBLIC_CACHE_TTL_MS,
+      };
+      preCandidatosCache = {
+        data: response.pre_candidatos,
+        expiresAt: Date.now() + PUBLIC_CACHE_TTL_MS,
+      };
+      return response;
+    })
+    .finally(() => {
+      cadastroPublicoPromise = null;
+    });
+
+  return cadastroPublicoPromise;
 }
 
 export function validarResponsavel(slug: string) {
   return apiRequest<ResponsavelStatus>(`/api/responsaveis/${slug}`);
 }
 
-export async function buscarDashboard(): Promise<DashboardMetric> {
-  const response = await apiRequest<DashboardApiResponse>("/api/admin/dashboard", {
-    auth: true,
-  });
+export async function getAdminDashboard(token: string): Promise<DashboardMetric> {
+  if (dashboardCache && dashboardCache.expiresAt > Date.now()) {
+    logFrontCache("/api/admin/dashboard", "hit");
+    return dashboardCache.data;
+  }
 
-  return {
-    totalCadastros: response.total_cadastros,
-    cadastrosHoje: response.cadastros_hoje,
-    totalCidades: response.total_cidades,
-    totalApoios: response.total_apoios,
-    responsaveisAtivos: response.responsaveis_ativos,
-    totalPreCandidatosAtivos: response.total_pre_candidatos_ativos,
-    totalPreCandidatosInativos: response.total_pre_candidatos_inativos,
-    apoiosPorPreCandidato: response.apoios_por_pre_candidato.map((item) => ({
-      nomePreCandidato: item.nomePreCandidato,
-      cargo: item.cargo,
-      totalApoios: item.totalApoios,
-      preCandidatoId: item.preCandidatoId,
-    })),
-    ultimosCadastros: response.ultimos_cadastros.map(mapCadastro),
-  };
+  if (dashboardPromise) {
+    logFrontInFlight("/api/admin/dashboard");
+    return dashboardPromise;
+  }
+
+  logFrontCache("/api/admin/dashboard", dashboardCache ? "stale" : "miss");
+  logFrontRevalidate("/api/admin/dashboard");
+  dashboardPromise = apiRequest<DashboardApiResponse>("/api/admin/dashboard", {
+    token: requireToken(token),
+    timeoutMs: 15000,
+  })
+    .then((response) => ({
+      totalCadastros: response.total_cadastros,
+      cadastrosHoje: response.cadastros_hoje,
+      totalCidades: response.total_cidades,
+      totalApoios: response.total_apoios,
+      responsaveisAtivos: response.responsaveis_ativos,
+      totalPreCandidatosAtivos: response.total_pre_candidatos_ativos,
+      totalPreCandidatosInativos: response.total_pre_candidatos_inativos,
+      apoiosPorPreCandidato: response.apoios_por_pre_candidato.map((item) => ({
+        nomePreCandidato: item.nomePreCandidato,
+        cargo: item.cargo,
+        totalApoios: item.totalApoios,
+        preCandidatoId: item.preCandidatoId,
+      })),
+      ultimosCadastros: response.ultimos_cadastros.map(mapCadastro),
+    }))
+    .then((mapped) => {
+      dashboardCache = {
+        data: mapped,
+        expiresAt: Date.now() + ADMIN_DASHBOARD_CACHE_TTL_MS,
+      };
+      return mapped;
+    })
+    .finally(() => {
+      dashboardPromise = null;
+    });
+
+  return dashboardPromise;
 }
 
-export async function buscarCadastros(params: {
+export async function getAdminCadastros(token: string, params: {
   search?: string;
   cidade?: string;
   page?: number;
   limit?: number;
+  signal?: AbortSignal;
 }): Promise<CadastrosResponse> {
   const searchParams = new URLSearchParams();
 
@@ -174,18 +305,45 @@ export async function buscarCadastros(params: {
   if (params.page) searchParams.set("page", String(params.page));
   if (params.limit) searchParams.set("limit", String(params.limit));
 
-  const response = await apiRequest<CadastrosApiResponse>(
-    `/api/admin/cadastros${searchParams.toString() ? `?${searchParams.toString()}` : ""}`,
-    { auth: true },
-  );
+  const path = `/api/admin/cadastros${searchParams.toString() ? `?${searchParams.toString()}` : ""}`;
 
-  return {
-    data: response.data.map(mapCadastro),
-    page: response.page,
-    limit: response.limit,
-    total: response.total,
-    totalPages: response.totalPages,
-  };
+  const cached = cadastrosCache.get(path);
+  if (cached && cached.expiresAt > Date.now()) {
+    logFrontCache(path, "hit");
+    return cached.data;
+  }
+
+  if (cadastrosInFlight.has(path)) {
+    logFrontInFlight(path);
+    return cadastrosInFlight.get(path)!;
+  }
+
+  logFrontCache(path, cached ? "stale" : "miss");
+  logFrontRevalidate(path);
+  const request = apiRequest<CadastrosApiResponse>(path, {
+    token: requireToken(token),
+    timeoutMs: 15000,
+  })
+    .then((response) => {
+      const mapped = {
+        data: response.data.map(mapCadastro),
+        page: response.page,
+        limit: response.limit,
+        total: response.total,
+        totalPages: response.totalPages,
+      };
+      cadastrosCache.set(path, {
+        data: mapped,
+        expiresAt: Date.now() + ADMIN_CADASTROS_CACHE_TTL_MS,
+      });
+      return mapped;
+    })
+    .finally(() => {
+      cadastrosInFlight.delete(path);
+    });
+
+  cadastrosInFlight.set(path, request);
+  return request;
 }
 
 function mapAdminPreCandidato(item: AdminPreCandidatoApiItem): AdminPreCandidato {
@@ -199,14 +357,38 @@ function mapAdminPreCandidato(item: AdminPreCandidatoApiItem): AdminPreCandidato
   };
 }
 
-export async function buscarAdminPreCandidatos() {
-  const response = await apiRequest<AdminPreCandidatoApiItem[]>("/api/admin/pre-candidatos", {
-    auth: true,
-  });
-  return response.map(mapAdminPreCandidato);
+export async function getAdminPreCandidatos(token: string) {
+  if (adminPreCandidatosCache && adminPreCandidatosCache.expiresAt > Date.now()) {
+    logFrontCache("/api/admin/pre-candidatos", "hit");
+    return adminPreCandidatosCache.data;
+  }
+  if (adminPreCandidatosPromise) {
+    logFrontInFlight("/api/admin/pre-candidatos");
+    return adminPreCandidatosPromise;
+  }
+
+  logFrontCache("/api/admin/pre-candidatos", adminPreCandidatosCache ? "stale" : "miss");
+  logFrontRevalidate("/api/admin/pre-candidatos");
+  adminPreCandidatosPromise = apiRequest<AdminPreCandidatoApiItem[]>("/api/admin/pre-candidatos", {
+    token: requireToken(token),
+    timeoutMs: 15000,
+  })
+    .then((response) => {
+      const mapped = response.map(mapAdminPreCandidato);
+      adminPreCandidatosCache = {
+        data: mapped,
+        expiresAt: Date.now() + ADMIN_PRE_CANDIDATOS_CACHE_TTL_MS,
+      };
+      return mapped;
+    })
+    .finally(() => {
+      adminPreCandidatosPromise = null;
+    });
+
+  return adminPreCandidatosPromise;
 }
 
-export async function criarAdminPreCandidato(payload: {
+export async function createAdminPreCandidato(token: string, payload: {
   nome: string;
   cargo: string;
   ativo: boolean;
@@ -214,13 +396,18 @@ export async function criarAdminPreCandidato(payload: {
 }) {
   const response = await apiRequest<AdminPreCandidatoApiItem>("/api/admin/pre-candidatos", {
     method: "POST",
-    auth: true,
+    token: requireToken(token),
+    timeoutMs: 15000,
     body: JSON.stringify(payload),
   });
-  return mapAdminPreCandidato(response);
+  const mapped = mapAdminPreCandidato(response);
+  adminPreCandidatosCache = null;
+  dashboardCache = null;
+  return mapped;
 }
 
-export async function atualizarAdminPreCandidato(
+export async function updateAdminPreCandidato(
+  token: string,
   id: string,
   payload: {
     nome: string;
@@ -231,32 +418,44 @@ export async function atualizarAdminPreCandidato(
 ) {
   const response = await apiRequest<AdminPreCandidatoApiItem>(`/api/admin/pre-candidatos/${id}`, {
     method: "PUT",
-    auth: true,
+    token: requireToken(token),
+    timeoutMs: 15000,
     body: JSON.stringify(payload),
   });
-  return mapAdminPreCandidato(response);
+  const mapped = mapAdminPreCandidato(response);
+  adminPreCandidatosCache = null;
+  dashboardCache = null;
+  return mapped;
 }
 
-export async function atualizarStatusPreCandidato(id: string, ativo: boolean) {
+export async function toggleAdminPreCandidato(token: string, id: string, ativo: boolean) {
   const response = await apiRequest<AdminPreCandidatoApiItem>(
     `/api/admin/pre-candidatos/${id}/status`,
     {
       method: "PATCH",
-      auth: true,
+      token: requireToken(token),
+      timeoutMs: 15000,
       body: JSON.stringify({ ativo }),
     },
   );
-  return mapAdminPreCandidato(response);
+  const mapped = mapAdminPreCandidato(response);
+  adminPreCandidatosCache = null;
+  dashboardCache = null;
+  return mapped;
 }
 
-export async function atualizarOrdemPreCandidato(id: string, ordem: number) {
+export async function updateAdminPreCandidatoOrdem(token: string, id: string, ordem: number) {
   const response = await apiRequest<AdminPreCandidatoApiItem>(
     `/api/admin/pre-candidatos/${id}/ordem`,
     {
       method: "PATCH",
-      auth: true,
+      token: requireToken(token),
+      timeoutMs: 15000,
       body: JSON.stringify({ ordem }),
     },
   );
-  return mapAdminPreCandidato(response);
+  const mapped = mapAdminPreCandidato(response);
+  adminPreCandidatosCache = null;
+  dashboardCache = null;
+  return mapped;
 }

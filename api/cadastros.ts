@@ -1,12 +1,12 @@
 import { z } from "zod";
 
+import { invalidateDashboardCache } from "./_lib/admin-cache";
 import { getCadastroConfig } from "./_lib/cadastro-config";
 import { getSupabaseServerClient } from "./_lib/supabase";
 import { getOriginIp, json, methodNotAllowed, readJsonBody } from "./_lib/http";
 import { normalizeCpf, normalizePhone, validateCpf } from "./_lib/personal-data";
 
 const cadastroSchema = z.object({
-  slug: z.string().trim().min(1).optional(),
   nome_completo: z.string().trim().min(3),
   telefone: z.string().trim().min(10),
   cpf: z.string().trim().min(11),
@@ -23,6 +23,7 @@ export default async function handler(req: any, res: any) {
     return methodNotAllowed(res, ["POST"]);
   }
 
+  const start = Date.now();
   try {
     const body = cadastroSchema.parse(await readJsonBody(req));
     const cpfNormalizado = normalizeCpf(body.cpf);
@@ -34,31 +35,15 @@ export default async function handler(req: any, res: any) {
 
     const supabase = getSupabaseServerClient();
     const cadastroConfig = await getCadastroConfig();
-    const slug = body.slug ?? cadastroConfig.slug;
 
-    if (!slug) {
+    if (!cadastroConfig.responsavelId) {
       return json(res, 404, { error: "Link de cadastro nao encontrado ou inativo." });
-    }
-
-    const { data: responsavel, error: responsavelError } = await supabase
-      .from("responsaveis")
-      .select("id")
-      .eq("slug", slug)
-      .eq("ativo", true)
-      .maybeSingle();
-
-    if (responsavelError) {
-      throw responsavelError;
-    }
-
-    if (!responsavel) {
-      return json(res, 404, { error: "Responsavel nao encontrado." });
     }
 
     const { data: duplicadoCpf, error: duplicadoCpfError } = await supabase
       .from("cadastros_apoio")
       .select("id")
-      .eq("responsavel_id", responsavel.id)
+      .eq("responsavel_id", cadastroConfig.responsavelId)
       .eq("cpf_normalizado", cpfNormalizado)
       .maybeSingle();
 
@@ -69,7 +54,7 @@ export default async function handler(req: any, res: any) {
     const { data: duplicadoTelefone, error: duplicadoTelefoneError } = await supabase
       .from("cadastros_apoio")
       .select("id")
-      .eq("responsavel_id", responsavel.id)
+      .eq("responsavel_id", cadastroConfig.responsavelId)
       .eq("telefone_normalizado", telefoneNormalizado)
       .maybeSingle();
 
@@ -98,7 +83,7 @@ export default async function handler(req: any, res: any) {
     const { data: cadastro, error: cadastroError } = await supabase
       .from("cadastros_apoio")
       .insert({
-        responsavel_id: responsavel.id,
+        responsavel_id: cadastroConfig.responsavelId,
         nome_completo: body.nome_completo,
         telefone: body.telefone,
         telefone_normalizado: telefoneNormalizado,
@@ -136,6 +121,7 @@ export default async function handler(req: any, res: any) {
       throw apoiosError;
     }
 
+    invalidateDashboardCache();
     return json(res, 201, { success: true });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -144,5 +130,7 @@ export default async function handler(req: any, res: any) {
 
     console.error("Erro ao registrar cadastro:", error);
     return json(res, 500, { error: "Nao foi possivel enviar o cadastro agora. Tente novamente." });
+  } finally {
+    console.log("[api/cadastros] tempo:", Date.now() - start, "ms");
   }
 }
