@@ -281,7 +281,7 @@ Para mudar o dominio na Vercel:
 
 O nome do projeto pode ser ajustado em Vercel > Project Settings > General > Project Name.
 O dominio `.vercel.app` depende de disponibilidade; para uma apresentacao mais profissional, use um dominio comprado.
-O WhatsApp pode manter preview antigo em cache por algum tempo. Para testar a atualizacao, envie `https://apoio-p-blico-2026-two.vercel.app/?v=2` ou aguarde o cache atualizar.
+O WhatsApp pode manter preview antigo em cache por algum tempo. Para testar a atualizacao, envie `https://apoio-p-blico-2026-two.vercel.app/?v=3` ou aguarde o cache atualizar.
 
 Cuidados importantes:
 
