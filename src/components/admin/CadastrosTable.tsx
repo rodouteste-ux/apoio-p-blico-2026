@@ -10,16 +10,19 @@ interface CadastrosTableProps {
 
 export function CadastrosTable({ cadastros, compact }: CadastrosTableProps) {
   return (
-    <div className="overflow-hidden rounded-2xl border border-border bg-card">
-      <table className="w-full text-sm">
+    <div className="overflow-x-auto rounded-2xl border border-border bg-card">
+      <table className="w-full min-w-[1120px] text-sm">
         <thead>
           <tr className="border-b border-border bg-muted/40">
             <Th>Nome</Th>
             {!compact && <Th>WhatsApp</Th>}
-            {!compact && <Th>CPF</Th>}
-            <Th>Cidade</Th>
+            <Th>Lideranca</Th>
+            <Th>Cidade onde mora</Th>
+            {!compact && <Th>Cidade onde vota</Th>}
             {!compact && <Th>Bairro</Th>}
+            {!compact && <Th>Local de votacao</Th>}
             <Th>Data</Th>
+            {!compact && <Th>Apoios</Th>}
             {!compact && <Th className="text-right">Acoes</Th>}
           </tr>
         </thead>
@@ -27,7 +30,7 @@ export function CadastrosTable({ cadastros, compact }: CadastrosTableProps) {
           {cadastros.length === 0 && (
             <tr>
               <td
-                colSpan={compact ? 3 : 7}
+                colSpan={compact ? 4 : 10}
                 className="px-4 py-8 text-center text-sm text-muted-foreground"
               >
                 Nenhum cadastro encontrado.
@@ -42,14 +45,23 @@ export function CadastrosTable({ cadastros, compact }: CadastrosTableProps) {
             >
               <td className="px-4 py-3 font-medium text-foreground">{cadastro.nomeCompleto}</td>
               {!compact && <td className="px-4 py-3 text-muted-foreground">{cadastro.telefone}</td>}
+              <td className="px-4 py-3 text-muted-foreground">{cadastro.liderancaNome}</td>
+              <td className="px-4 py-3 text-muted-foreground">{cadastro.cidadeMoradia}</td>
               {!compact && (
-                <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
-                  {cadastro.cpfMascarado}
+                <td className="px-4 py-3 text-muted-foreground">
+                  {cadastro.cidadeVotacao || "Nao informado"}
                 </td>
               )}
-              <td className="px-4 py-3 text-muted-foreground">{cadastro.cidade}</td>
               {!compact && <td className="px-4 py-3 text-muted-foreground">{cadastro.bairro}</td>}
+              {!compact && (
+                <td className="px-4 py-3 text-muted-foreground">
+                  {cadastro.localVotacao || "Nao informado"}
+                </td>
+              )}
               <td className="px-4 py-3 text-muted-foreground">{formatDate(cadastro.criadoEm)}</td>
+              {!compact && (
+                <td className="px-4 py-3 text-muted-foreground">{cadastro.apoios.length}</td>
+              )}
               {!compact && (
                 <td className="px-4 py-3">
                   <div className="flex justify-end">

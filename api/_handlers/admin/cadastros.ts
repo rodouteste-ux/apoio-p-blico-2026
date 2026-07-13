@@ -1,6 +1,6 @@
 import { handleAdminAuthError, requireAdmin } from "../../_lib/admin-auth.js";
 import { getSupabaseServerClient } from "../../_lib/supabase.js";
-import { formatPhone, maskCpf } from "../../_lib/personal-data.js";
+import { formatPhone } from "../../_lib/personal-data.js";
 import { json, methodNotAllowed, parsePositiveInt } from "../../_lib/http.js";
 
 export default async function handler(req: any, res: any) {
@@ -15,7 +15,9 @@ export default async function handler(req: any, res: any) {
     console.log("[api/admin/cadastros] requireAdmin:", Date.now() - authStart, "ms");
     const search = String(req.query?.search ?? "").trim();
     const cidade = String(req.query?.cidade ?? "").trim();
+    const lideranca = String(req.query?.lideranca ?? "").trim();
     console.log("[api/admin/cadastros] filtro cidade:", cidade || "todas");
+    console.log("[api/admin/cadastros] filtro lideranca:", lideranca || "todas");
     const page = parsePositiveInt(req.query?.page, 1);
     const limit = Math.min(parsePositiveInt(req.query?.limit, 20), 100);
     const from = (page - 1) * limit;
@@ -27,14 +29,20 @@ export default async function handler(req: any, res: any) {
     let query = supabase
       .from("cadastros_apoio")
       .select(
-        "id, nome_completo, telefone, telefone_normalizado, cpf_normalizado, cidade, bairro, rua_numero, local_votacao, observacoes, criado_em",
+        "id, nome_completo, telefone, telefone_normalizado, lideranca_nome, lideranca_slug, cidade, cidade_moradia, cidade_votacao, bairro, rua_numero, local_votacao, observacoes, criado_em",
         { count: countMode },
       )
       .order("criado_em", { ascending: false })
       .range(from, to);
 
     if (cidade) {
-      query = query.eq("cidade", cidade);
+      query = query.or(`cidade_moradia.eq.${cidade},cidade.eq.${cidade}`);
+    }
+
+    if (lideranca === "sem_lideranca") {
+      query = query.or("lideranca_slug.is.null,lideranca_nome.is.null,lideranca_nome.eq.");
+    } else if (lideranca) {
+      query = query.eq("lideranca_slug", lideranca);
     }
 
     if (search) {
@@ -57,6 +65,32 @@ export default async function handler(req: any, res: any) {
 
     if (error) {
       throw error;
+    }
+
+    const liderancasStart = Date.now();
+    const { data: liderancasData, error: liderancasError } = await supabase
+      .from("cadastros_apoio")
+      .select("lideranca_nome, lideranca_slug")
+      .order("lideranca_nome", { ascending: true })
+      .limit(5000);
+    console.log("[api/admin/cadastros] query liderancas:", Date.now() - liderancasStart, "ms");
+
+    if (liderancasError) {
+      throw liderancasError;
+    }
+
+    const liderancasMap = new Map<string, { nome: string; slug: string }>();
+    let temSemLideranca = false;
+    for (const item of liderancasData ?? []) {
+      const nome = item.lideranca_nome?.trim();
+      const slug = item.lideranca_slug?.trim();
+      if (!nome || !slug) {
+        temSemLideranca = true;
+        continue;
+      }
+      if (!liderancasMap.has(slug)) {
+        liderancasMap.set(slug, { nome, slug });
+      }
     }
 
     const cadastroIds = (data ?? []).map((item) => item.id);
@@ -99,8 +133,11 @@ export default async function handler(req: any, res: any) {
           nome_completo: item.nome_completo,
           telefone: formatPhone(item.telefone),
           telefone_normalizado: item.telefone_normalizado,
-          cpf_mascarado: maskCpf(item.cpf_normalizado),
+          lideranca_nome: item.lideranca_nome,
+          lideranca_slug: item.lideranca_slug,
           cidade: item.cidade,
+          cidade_moradia: item.cidade_moradia,
+          cidade_votacao: item.cidade_votacao,
           bairro: item.bairro,
           rua_numero: item.rua_numero,
           local_votacao: item.local_votacao,
@@ -112,6 +149,10 @@ export default async function handler(req: any, res: any) {
       limit,
       total,
       totalPages,
+      liderancas: [
+        ...Array.from(liderancasMap.values()),
+        ...(temSemLideranca ? [{ nome: "Sem lideranca", slug: "sem_lideranca" }] : []),
+      ],
     };
     console.log("[api/admin/cadastros] montar resposta:", Date.now() - jsonStart, "ms");
 

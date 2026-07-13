@@ -10,11 +10,14 @@ export interface Cadastro {
   nomeCompleto: string;
   telefone: string;
   telefoneNormalizado?: string;
-  cpfMascarado: string;
+  liderancaNome: string;
+  liderancaSlug?: string | null;
   cidade: string;
+  cidadeMoradia: string;
+  cidadeVotacao?: string | null;
   bairro: string;
   ruaNumero: string;
-  localVotacao: string;
+  localVotacao?: string | null;
   observacoes?: string | null;
   criadoEm: string;
   apoios: Apoio[];
@@ -42,4 +45,8 @@ export interface CadastrosResponse {
   limit: number;
   total: number;
   totalPages: number;
+  liderancas: Array<{
+    nome: string;
+    slug: string;
+  }>;
 }

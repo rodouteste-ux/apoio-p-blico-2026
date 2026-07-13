@@ -12,7 +12,6 @@ import { FormTextarea } from "@/components/form/FormTextarea";
 import { SubmitButton } from "@/components/form/SubmitButton";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { cidades } from "@/data/cidades";
-import { validateCpf } from "@/lib/personal-data";
 import {
   buscarCadastroPublico,
   enviarCadastro,
@@ -20,7 +19,7 @@ import {
 } from "@/services/cadastroService";
 import { ApiError } from "@/services/api";
 import { logMeasure, startMeasure } from "@/utils/perf";
-import { maskCPF, maskWhatsapp, onlyDigits } from "@/utils/masks";
+import { maskWhatsapp, onlyDigits } from "@/utils/masks";
 
 export const Route = createFileRoute("/cadastro")({
   component: CadastroPage,
@@ -32,14 +31,12 @@ const schema = z.object({
     .min(1, "WhatsApp obrigatorio")
     .refine((value) => onlyDigits(value).length >= 10, "WhatsApp invalido"),
   nome: z.string().trim().min(3, "Nome completo obrigatorio"),
-  cpf: z
-    .string()
-    .min(1, "CPF obrigatorio")
-    .refine((value) => validateCpf(value), "CPF invalido"),
-  cidade: z.string().min(1, "Cidade obrigatoria"),
+  liderancaNome: z.string().trim().min(3, "Lideranca obrigatoria"),
+  cidadeMoradia: z.string().min(1, "Cidade onde mora obrigatoria"),
+  cidadeVotacao: z.string().optional(),
   bairro: z.string().trim().min(2, "Bairro obrigatorio"),
   ruaNumero: z.string().trim().min(3, "Rua e numero obrigatorios"),
-  localVotacao: z.string().trim().min(2, "Local de votacao obrigatorio"),
+  localVotacao: z.string().optional(),
   preCandidatos: z.array(z.string()).min(1, "Selecione pelo menos um pre-candidato"),
   observacoes: z.string().max(500).optional(),
 });
@@ -76,8 +73,9 @@ function CadastroPage() {
     defaultValues: {
       whatsapp: "",
       nome: "",
-      cpf: "",
-      cidade: "",
+      liderancaNome: "",
+      cidadeMoradia: "",
+      cidadeVotacao: "",
       bairro: "",
       ruaNumero: "",
       localVotacao: "",
@@ -136,7 +134,7 @@ function CadastroPage() {
     } catch (error) {
       if (error instanceof ApiError) {
         if (error.status === 409) {
-          setSubmitError("Este cadastro ja foi registrado anteriormente.");
+          setSubmitError("Este telefone ja foi cadastrado anteriormente.");
         } else if (error.status === 400) {
           setSubmitError("Verifique os dados informados e tente novamente.");
         } else {
@@ -236,31 +234,35 @@ function CadastroPage() {
               {...register("nome")}
               error={errors.nome?.message}
             />
-            <Controller
-              control={control}
-              name="cpf"
-              render={({ field }) => (
-                <FormInput
-                  label="CPF"
-                  placeholder="000.000.000-00"
-                  inputMode="numeric"
-                  value={field.value}
-                  onChange={(event) => field.onChange(maskCPF(event.target.value))}
-                  onBlur={field.onBlur}
-                  error={errors.cpf?.message}
-                />
-              )}
+            <FormInput
+              label="Lideranca"
+              placeholder="Informe o nome da lideranca que indicou voce"
+              {...register("liderancaNome")}
+              error={errors.liderancaNome?.message}
             />
+            <p className="-mt-2 text-xs text-muted-foreground">
+              Ex: Joao Silva, Maria Santos, lideranca do bairro...
+            </p>
           </FormSection>
 
           <FormSection step={2} title="Endereco e votacao">
             <FormSelect
-              label="Cidade"
+              label="Cidade onde mora"
               placeholder="Selecione a cidade"
               options={cidades}
-              {...register("cidade")}
-              error={errors.cidade?.message}
+              {...register("cidadeMoradia")}
+              error={errors.cidadeMoradia?.message}
             />
+            <FormSelect
+              label="Cidade onde vota"
+              placeholder="Selecione a cidade, se for diferente"
+              options={cidades}
+              {...register("cidadeVotacao")}
+              error={errors.cidadeVotacao?.message}
+            />
+            <p className="-mt-2 text-xs text-muted-foreground">
+              Se voce mora em uma cidade, mas vota em outra, informe as duas.
+            </p>
             <FormInput
               label="Bairro / povoado"
               placeholder="Ex.: Centro"
@@ -274,8 +276,8 @@ function CadastroPage() {
               error={errors.ruaNumero?.message}
             />
             <FormInput
-              label="Local de votacao"
-              placeholder="Ex.: Escola Municipal Joao XXIII"
+              label="Local de votacao, se souber"
+              placeholder="Ex.: Escola Municipal..., Colegio..., nao sei"
               {...register("localVotacao")}
               error={errors.localVotacao?.message}
             />

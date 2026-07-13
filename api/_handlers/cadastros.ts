@@ -4,16 +4,18 @@ import { invalidateDashboardCache } from "../_lib/admin-cache.js";
 import { getCadastroConfig } from "../_lib/cadastro-config.js";
 import { getSupabaseServerClient } from "../_lib/supabase.js";
 import { getOriginIp, json, methodNotAllowed, readJsonBody } from "../_lib/http.js";
-import { normalizeCpf, normalizePhone, validateCpf } from "../_lib/personal-data.js";
+import { normalizePhone } from "../_lib/personal-data.js";
 
 const cadastroSchema = z.object({
   nome_completo: z.string().trim().min(3),
   telefone: z.string().trim().min(10),
-  cpf: z.string().trim().min(11),
-  cidade: z.string().trim().min(1),
+  lideranca_nome: z.string().trim().min(3),
+  lideranca_slug: z.string().trim().optional().or(z.literal("")),
+  cidade_moradia: z.string().trim().min(1),
+  cidade_votacao: z.string().trim().optional().nullable().or(z.literal("")),
   bairro: z.string().trim().min(2),
   rua_numero: z.string().trim().min(3),
-  local_votacao: z.string().trim().min(2),
+  local_votacao: z.string().trim().optional().nullable().or(z.literal("")),
   observacoes: z.string().trim().max(500).optional().or(z.literal("")),
   pre_candidatos: z.array(z.string().refine((value) => value.startsWith("mock-") || z.string().uuid().safeParse(value).success)).min(1),
 });
@@ -36,6 +38,16 @@ function fallbackCadastroRecebido(res: any, details?: string) {
   });
 }
 
+function gerarSlugLideranca(nome: string) {
+  return nome
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
 export default async function handler(req: any, res: any) {
   if (req.method !== "POST") {
     return methodNotAllowed(res, ["POST"]);
@@ -44,10 +56,14 @@ export default async function handler(req: any, res: any) {
   const start = Date.now();
   try {
     const body = cadastroSchema.parse(await readJsonBody(req));
-    const cpfNormalizado = normalizeCpf(body.cpf);
     const telefoneNormalizado = normalizePhone(body.telefone);
+    const liderancaNome = body.lideranca_nome.trim();
+    const liderancaSlug = body.lideranca_slug?.trim() || gerarSlugLideranca(liderancaNome);
+    const cidadeMoradia = body.cidade_moradia.trim();
+    const cidadeVotacao = body.cidade_votacao?.trim() || null;
+    const localVotacao = body.local_votacao?.trim() || null;
 
-    if (!validateCpf(cpfNormalizado) || telefoneNormalizado.length < 10) {
+    if (telefoneNormalizado.length < 10 || !liderancaSlug) {
       return json(res, 400, { error: "Verifique os dados informados e tente novamente." });
     }
 
@@ -56,17 +72,6 @@ export default async function handler(req: any, res: any) {
 
     if (!cadastroConfig.responsavelId) {
       return json(res, 404, { error: "Link de cadastro nao encontrado ou inativo." });
-    }
-
-    const { data: duplicadoCpf, error: duplicadoCpfError } = await supabase
-      .from("cadastros_apoio")
-      .select("id")
-      .eq("responsavel_id", cadastroConfig.responsavelId)
-      .eq("cpf_normalizado", cpfNormalizado)
-      .maybeSingle();
-
-    if (duplicadoCpfError) {
-      throw duplicadoCpfError;
     }
 
     const { data: duplicadoTelefone, error: duplicadoTelefoneError } = await supabase
@@ -80,8 +85,8 @@ export default async function handler(req: any, res: any) {
       throw duplicadoTelefoneError;
     }
 
-    if (duplicadoCpf || duplicadoTelefone) {
-      return json(res, 409, { error: "Este cadastro ja foi registrado anteriormente." });
+    if (duplicadoTelefone) {
+      return json(res, 409, { error: "Este telefone ja foi cadastrado anteriormente." });
     }
 
     const mockIds = body.pre_candidatos.filter((id) => id.startsWith("mock-"));
@@ -117,12 +122,14 @@ export default async function handler(req: any, res: any) {
         nome_completo: body.nome_completo,
         telefone: body.telefone,
         telefone_normalizado: telefoneNormalizado,
-        cpf: body.cpf,
-        cpf_normalizado: cpfNormalizado,
-        cidade: body.cidade,
+        lideranca_nome: liderancaNome,
+        lideranca_slug: liderancaSlug,
+        cidade: cidadeMoradia,
+        cidade_moradia: cidadeMoradia,
+        cidade_votacao: cidadeVotacao,
         bairro: body.bairro,
         rua_numero: body.rua_numero,
-        local_votacao: body.local_votacao,
+        local_votacao: localVotacao,
         observacoes: body.observacoes || null,
         ip_origem: getOriginIp(req),
         user_agent: req.headers["user-agent"] ?? null,
@@ -132,7 +139,7 @@ export default async function handler(req: any, res: any) {
 
     if (cadastroError) {
       if (cadastroError.code === "23505") {
-        return json(res, 409, { error: "Este cadastro ja foi registrado anteriormente." });
+        return json(res, 409, { error: "Este telefone ja foi cadastrado anteriormente." });
       }
 
       throw cadastroError;

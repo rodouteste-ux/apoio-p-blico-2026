@@ -78,11 +78,16 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "Pré-campanha 2026 — Cadastro de Apoio" },
-      { name: "description", content: "Sistema de cadastro de apoiadores da pré-campanha 2026." },
+      { name: "description", content: "Cadastre seu apoio e participe da pré-campanha 2026." },
       { property: "og:title", content: "Pré-campanha 2026 — Cadastro de Apoio" },
-      { property: "og:description", content: "Cadastro de apoiadores da pré-campanha 2026." },
+      { property: "og:description", content: "Cadastre seu apoio e participe da pré-campanha 2026." },
       { property: "og:type", content: "website" },
+      { property: "og:url", content: "/" },
+      { property: "og:image", content: "/og-image.png" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "Pré-campanha 2026 — Cadastro de Apoio" },
+      { name: "twitter:description", content: "Cadastre seu apoio e participe da pré-campanha 2026." },
+      { name: "twitter:image", content: "/og-image.png" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
@@ -103,7 +108,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="pt-BR">
       <head>
         <HeadContent />
       </head>

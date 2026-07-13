@@ -12,7 +12,7 @@ export function CadastroMobileCard({ cadastro }: { cadastro: Cadastro }) {
             {cadastro.nomeCompleto}
           </h3>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            {cadastro.cidade} · {cadastro.bairro}
+            {cadastro.cidadeMoradia} - {cadastro.bairro}
           </p>
         </div>
         <span className="shrink-0 rounded-full bg-accent px-2.5 py-1 text-[11px] font-medium text-primary">
@@ -26,8 +26,20 @@ export function CadastroMobileCard({ cadastro }: { cadastro: Cadastro }) {
           <dd className="mt-0.5 text-foreground">{cadastro.telefone}</dd>
         </div>
         <div>
-          <dt className="text-muted-foreground">CPF</dt>
-          <dd className="mt-0.5 font-mono text-foreground">{cadastro.cpfMascarado}</dd>
+          <dt className="text-muted-foreground">Lideranca</dt>
+          <dd className="mt-0.5 text-foreground">{cadastro.liderancaNome}</dd>
+        </div>
+        <div>
+          <dt className="text-muted-foreground">Cidade onde vota</dt>
+          <dd className="mt-0.5 text-foreground">{cadastro.cidadeVotacao || "Nao informado"}</dd>
+        </div>
+        <div>
+          <dt className="text-muted-foreground">Local de votacao</dt>
+          <dd className="mt-0.5 text-foreground">{cadastro.localVotacao || "Nao informado"}</dd>
+        </div>
+        <div>
+          <dt className="text-muted-foreground">Apoios</dt>
+          <dd className="mt-0.5 text-foreground">{cadastro.apoios.length}</dd>
         </div>
       </dl>
 

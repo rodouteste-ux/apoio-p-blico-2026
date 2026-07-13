@@ -70,9 +70,10 @@ Para `vercel dev`:
 4. Depois execute [`supabase/seed.sql`](./supabase/seed.sql).
 5. Execute [`supabase/performance.sql`](./supabase/performance.sql) para garantir os indices de busca, paginacao e auth.
 6. Execute [`supabase/dashboard_rpc.sql`](./supabase/dashboard_rpc.sql) para reduzir as chamadas do dashboard admin.
-7. Crie o usuario admin em `Authentication > Users`.
-8. Execute [`supabase/admin-example.sql`](./supabase/admin-example.sql) preenchendo o UUID e o e-mail corretos.
-9. Para diagnosticar producao, execute [`supabase/check-production.sql`](./supabase/check-production.sql).
+7. Execute [`supabase/update-cadastro-lideranca.sql`](./supabase/update-cadastro-lideranca.sql) para habilitar lideranca, cidades separadas e local de votacao opcional.
+8. Crie o usuario admin em `Authentication > Users`.
+9. Execute [`supabase/admin-example.sql`](./supabase/admin-example.sql) preenchendo o UUID e o e-mail corretos.
+10. Para diagnosticar producao, execute [`supabase/check-production.sql`](./supabase/check-production.sql).
 
 O banco precisa ter:
 
@@ -87,6 +88,7 @@ Se alguma tabela nao existir, rode novamente:
 2. [`supabase/seed.sql`](./supabase/seed.sql)
 3. [`supabase/performance.sql`](./supabase/performance.sql)
 4. [`supabase/dashboard_rpc.sql`](./supabase/dashboard_rpc.sql)
+5. [`supabase/update-cadastro-lideranca.sql`](./supabase/update-cadastro-lideranca.sql)
 
 ## Estrutura principal
 
@@ -133,7 +135,7 @@ Tabelas principais:
 O schema inclui indices para melhorar performance de:
 
 - paginacao por `criado_em`
-- filtro por `cidade`
+- filtro por `cidade`, `cidade_moradia`, `cidade_votacao` e `lideranca_slug`
 - busca por `nome_completo`
 - busca por `telefone_normalizado`
 - carregamento de apoios por `cadastro_id`
@@ -193,12 +195,14 @@ Fluxo esperado do login admin:
    - deve retornar `{ "ativo": true }` se houver responsavel interno ativo
 6. Confira `http://localhost:3000/api/pre-candidatos`.
    - deve retornar apenas candidatos ativos, ordenados por `ordem`
-7. Envie um cadastro real.
-8. Se repetir CPF ou WhatsApp para o mesmo responsavel, a API deve retornar:
+7. Envie um cadastro real sem CPF.
+8. Confirme que `lideranca_nome` e obrigatorio no formulario.
+9. Confirme que `local_votacao` pode ficar vazio.
+10. Se repetir WhatsApp para o mesmo responsavel, a API deve retornar:
 
 ```json
 {
-  "error": "Este cadastro ja foi registrado anteriormente."
+  "error": "Este telefone ja foi cadastrado anteriormente."
 }
 ```
 
@@ -216,6 +220,9 @@ Fluxo esperado do login admin:
 10. Abra `http://localhost:3000/admin/cadastros`.
     - a lista deve abrir com paginacao real
     - a busca deve usar debounce
+    - CPF nao deve aparecer
+    - o filtro por lideranca deve funcionar
+    - o ranking "Cadastros por lideranca" deve aparecer
     - erro deve exibir mensagem amigavel e botao de tentar novamente
 11. Abra `http://localhost:3000/admin/pre-candidatos`.
     - deve listar ativos e inativos
@@ -258,6 +265,22 @@ Valores esperados:
 - `DEFAULT_RESPONSAVEL_ID`: id da tabela `responsaveis`; se vazio, usa o primeiro responsavel ativo
 
 Mantenha `SUPABASE_SERVICE_ROLE_KEY` apenas no ambiente do servidor.
+
+## Dominio e preview do WhatsApp
+
+As metatags Open Graph e Twitter Card apontam para `/og-image.png`.
+
+Para mudar o dominio na Vercel:
+
+1. Ir em Vercel > Project > Settings > Domains.
+2. Adicionar dominio personalizado.
+3. Exemplos: `cadastroapoio2026.com.br`, `apoio2026.com.br`, `pre2026.com.br`.
+4. Configurar o DNS conforme a Vercel pedir.
+5. Depois atualizar `og:url` e `og:image` em `src/routes/__root.tsx` para a URL absoluta do dominio final.
+
+O nome do projeto pode ser ajustado em Vercel > Project Settings > General > Project Name.
+O dominio `.vercel.app` depende de disponibilidade; para uma apresentacao mais profissional, use um dominio comprado.
+O WhatsApp pode manter preview antigo em cache por algum tempo, entao teste com um link novo ou aguarde a atualizacao do cache.
 
 Cuidados importantes:
 

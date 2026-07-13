@@ -24,6 +24,8 @@ function AdminCadastros() {
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [cidadeFilter, setCidadeFilter] = useState<string>("todas");
+  const [liderancaFilter, setLiderancaFilter] = useState<string>("todas");
+  const [liderancas, setLiderancas] = useState<Array<{ nome: string; slug: string }>>([]);
   const [cadastros, setCadastros] = useState<Cadastro[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -48,8 +50,9 @@ function AdminCadastros() {
     searchParams.set("limit", "20");
     if (debouncedQuery) searchParams.set("search", debouncedQuery);
     if (cidadeFilter !== "todas") searchParams.set("cidade", cidadeFilter);
+    if (liderancaFilter !== "todas") searchParams.set("lideranca", liderancaFilter);
     return searchParams.toString();
-  }, [cidadeFilter, debouncedQuery, page]);
+  }, [cidadeFilter, debouncedQuery, liderancaFilter, page]);
 
   useEffect(() => {
     let active = true;
@@ -65,6 +68,7 @@ function AdminCadastros() {
         const response = await getAdminCadastros(adminSession.accessToken, {
           search: debouncedQuery,
           cidade: cidadeFilter,
+          lideranca: liderancaFilter,
           page,
           limit: 20,
         });
@@ -72,6 +76,7 @@ function AdminCadastros() {
         if (!active) return;
 
         setCadastros(response.data);
+        setLiderancas(response.liderancas);
         setTotal(response.total);
         setTotalPages(response.totalPages);
         setError(null);
@@ -103,6 +108,22 @@ function AdminCadastros() {
     [],
   );
 
+  const rankingLiderancas = useMemo(() => {
+    const ranking = new Map<string, { nome: string; total: number }>();
+
+    for (const cadastro of cadastros) {
+      const nome = cadastro.liderancaNome || "Sem lideranca";
+      const current = ranking.get(nome);
+      if (current) {
+        current.total += 1;
+      } else {
+        ranking.set(nome, { nome, total: 1 });
+      }
+    }
+
+    return Array.from(ranking.values()).sort((a, b) => b.total - a.total);
+  }, [cadastros]);
+
   return (
     <AppLayout maxWidth="xl">
       <div className="mb-3">
@@ -126,7 +147,7 @@ function AdminCadastros() {
         </div>
       </header>
 
-      <div className="mb-4 grid gap-3 sm:grid-cols-[1fr_220px]">
+      <div className="mb-4 grid gap-3 sm:grid-cols-[1fr_220px_240px]">
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input
@@ -150,6 +171,41 @@ function AdminCadastros() {
             </option>
           ))}
         </select>
+        <select
+          value={liderancaFilter}
+          onChange={(event) => {
+            setLiderancaFilter(event.target.value);
+            setPage(1);
+          }}
+          className="h-11 rounded-lg border border-border bg-white px-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15"
+        >
+          <option value="todas">Todas as liderancas</option>
+          {liderancas.map((lideranca) => (
+            <option key={lideranca.slug} value={lideranca.slug}>
+              {lideranca.nome}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="mb-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <p className="rounded-2xl border border-border bg-card px-4 py-3 text-sm text-muted-foreground">
+          Total de cadastros filtrados: <span className="font-semibold text-foreground">{total}</span>
+        </p>
+        <section className="rounded-2xl border border-border bg-card p-4">
+          <h2 className="text-sm font-semibold text-foreground">Cadastros por lideranca</h2>
+          <div className="mt-3 grid gap-2 text-sm">
+            {rankingLiderancas.length === 0 && (
+              <p className="text-muted-foreground">Nenhum cadastro carregado.</p>
+            )}
+            {rankingLiderancas.map((item) => (
+              <div key={item.nome} className="flex items-center justify-between gap-3">
+                <span className="truncate text-muted-foreground">{item.nome}</span>
+                <span className="font-semibold text-foreground">{item.total}</span>
+              </div>
+            ))}
+          </div>
+        </section>
       </div>
 
       {error && (

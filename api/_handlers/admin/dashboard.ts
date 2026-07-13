@@ -6,7 +6,7 @@ import {
   setDashboardInFlight,
 } from "../../_lib/admin-cache.js";
 import { getSupabaseServerClient } from "../../_lib/supabase.js";
-import { formatPhone, maskCpf } from "../../_lib/personal-data.js";
+import { formatPhone } from "../../_lib/personal-data.js";
 import { json, methodNotAllowed } from "../../_lib/http.js";
 
 async function loadDashboardMetrics(supabase: ReturnType<typeof getSupabaseServerClient>, startOfDayUtc: string) {
@@ -137,7 +137,7 @@ async function loadUltimosCadastros(supabase: ReturnType<typeof getSupabaseServe
   try {
     return await supabase
       .from("cadastros_apoio")
-      .select("id, nome_completo, telefone, cpf_normalizado, cidade, bairro, rua_numero, local_votacao, observacoes, criado_em")
+      .select("id, nome_completo, telefone, lideranca_nome, lideranca_slug, cidade, cidade_moradia, cidade_votacao, bairro, rua_numero, local_votacao, observacoes, criado_em")
       .order("criado_em", { ascending: false })
       .limit(5);
   } finally {
@@ -182,8 +182,11 @@ async function buildDashboardPayload() {
       id: item.id,
       nome_completo: item.nome_completo,
       telefone: formatPhone(item.telefone),
-      cpf_mascarado: maskCpf(item.cpf_normalizado),
+      lideranca_nome: item.lideranca_nome,
+      lideranca_slug: item.lideranca_slug,
       cidade: item.cidade,
+      cidade_moradia: item.cidade_moradia,
+      cidade_votacao: item.cidade_votacao,
       bairro: item.bairro,
       rua_numero: item.rua_numero,
       local_votacao: item.local_votacao,

@@ -7,11 +7,12 @@ import { apiRequest } from "./api";
 export interface CadastroPayload {
   nome: string;
   whatsapp: string;
-  cpf: string;
-  cidade: string;
+  liderancaNome: string;
+  cidadeMoradia: string;
+  cidadeVotacao?: string;
   bairro: string;
   ruaNumero: string;
-  localVotacao: string;
+  localVotacao?: string;
   preCandidatos: string[];
   observacoes?: string;
 }
@@ -50,11 +51,14 @@ interface CadastroApiItem {
   nome_completo: string;
   telefone: string;
   telefone_normalizado?: string;
-  cpf_mascarado: string;
-  cidade: string;
+  lideranca_nome?: string | null;
+  lideranca_slug?: string | null;
+  cidade?: string | null;
+  cidade_moradia?: string | null;
+  cidade_votacao?: string | null;
   bairro: string;
   rua_numero: string;
-  local_votacao: string;
+  local_votacao?: string | null;
   observacoes?: string | null;
   criado_em: string;
   apoios: Array<{
@@ -71,6 +75,10 @@ interface CadastrosApiResponse {
   limit: number;
   total: number;
   totalPages: number;
+  liderancas?: Array<{
+    nome: string;
+    slug: string;
+  }>;
 }
 
 interface CadastroConfigResponse {
@@ -134,16 +142,21 @@ function requireToken(token: string | null | undefined) {
 }
 
 function mapCadastro(item: CadastroApiItem) {
+  const cidadeMoradia = item.cidade_moradia || item.cidade || "";
+
   return {
     id: item.id,
     nomeCompleto: item.nome_completo,
     telefone: item.telefone,
     telefoneNormalizado: item.telefone_normalizado,
-    cpfMascarado: item.cpf_mascarado,
-    cidade: item.cidade,
+    liderancaNome: item.lideranca_nome || "Sem lideranca",
+    liderancaSlug: item.lideranca_slug,
+    cidade: cidadeMoradia,
+    cidadeMoradia,
+    cidadeVotacao: item.cidade_votacao || null,
     bairro: item.bairro,
     ruaNumero: item.rua_numero,
-    localVotacao: item.local_votacao,
+    localVotacao: item.local_votacao || null,
     observacoes: item.observacoes,
     criadoEm: item.criado_em,
     apoios: item.apoios.map((apoio) => ({
@@ -155,17 +168,33 @@ function mapCadastro(item: CadastroApiItem) {
   };
 }
 
+export function gerarSlugLideranca(nome: string) {
+  return nome
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
 export async function enviarCadastro(data: CadastroPayload) {
+  const liderancaNome = data.liderancaNome.trim();
+  const cidadeVotacao = data.cidadeVotacao?.trim() || null;
+  const localVotacao = data.localVotacao?.trim() || null;
+
   return apiRequest<{ success: true }>("/api/cadastros", {
     method: "POST",
     body: JSON.stringify({
       nome_completo: data.nome,
       telefone: data.whatsapp,
-      cpf: data.cpf,
-      cidade: data.cidade,
+      lideranca_nome: liderancaNome,
+      lideranca_slug: gerarSlugLideranca(liderancaNome),
+      cidade_moradia: data.cidadeMoradia,
+      cidade_votacao: cidadeVotacao,
       bairro: data.bairro,
       rua_numero: data.ruaNumero,
-      local_votacao: data.localVotacao,
+      local_votacao: localVotacao,
       observacoes: data.observacoes,
       pre_candidatos: data.preCandidatos,
     }),
@@ -307,6 +336,7 @@ export function prefetchAdminDashboard(token: string) {
 export async function getAdminCadastros(token: string, params: {
   search?: string;
   cidade?: string;
+  lideranca?: string;
   page?: number;
   limit?: number;
   signal?: AbortSignal;
@@ -315,6 +345,9 @@ export async function getAdminCadastros(token: string, params: {
 
   if (params.search) searchParams.set("search", params.search);
   if (params.cidade && params.cidade !== "todas") searchParams.set("cidade", params.cidade);
+  if (params.lideranca && params.lideranca !== "todas") {
+    searchParams.set("lideranca", params.lideranca);
+  }
   if (params.page) searchParams.set("page", String(params.page));
   if (params.limit) searchParams.set("limit", String(params.limit));
 
@@ -344,6 +377,7 @@ export async function getAdminCadastros(token: string, params: {
         limit: response.limit,
         total: response.total,
         totalPages: response.totalPages,
+        liderancas: response.liderancas ?? [],
       };
       cadastrosCache.set(path, {
         data: mapped,
