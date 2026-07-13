@@ -29,7 +29,7 @@ export default async function handler(req: any, res: any) {
     let query = supabase
       .from("cadastros_apoio")
       .select(
-        "id, nome_completo, telefone, telefone_normalizado, lideranca_nome, lideranca_slug, cidade, cidade_moradia, cidade_votacao, bairro, rua_numero, local_votacao, observacoes, criado_em",
+        "id, nome_completo, telefone, telefone_normalizado, lideranca_nome, lideranca_slug, cidade, cidade_moradia, bairro, rua_numero, local_votacao, observacoes, criado_em",
         { count: countMode },
       )
       .order("criado_em", { ascending: false })
@@ -137,7 +137,6 @@ export default async function handler(req: any, res: any) {
           lideranca_slug: item.lideranca_slug,
           cidade: item.cidade,
           cidade_moradia: item.cidade_moradia,
-          cidade_votacao: item.cidade_votacao,
           bairro: item.bairro,
           rua_numero: item.rua_numero,
           local_votacao: item.local_votacao,

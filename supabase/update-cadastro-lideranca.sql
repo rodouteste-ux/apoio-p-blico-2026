@@ -8,9 +8,6 @@ alter table cadastros_apoio
 add column if not exists cidade_moradia text;
 
 alter table cadastros_apoio
-add column if not exists cidade_votacao text;
-
-alter table cadastros_apoio
 alter column local_votacao drop not null;
 
 alter table cadastros_apoio
@@ -29,6 +26,3 @@ on cadastros_apoio(lideranca_slug);
 
 create index if not exists idx_cadastros_cidade_moradia
 on cadastros_apoio(cidade_moradia);
-
-create index if not exists idx_cadastros_cidade_votacao
-on cadastros_apoio(cidade_votacao);

@@ -70,7 +70,7 @@ Para `vercel dev`:
 4. Depois execute [`supabase/seed.sql`](./supabase/seed.sql).
 5. Execute [`supabase/performance.sql`](./supabase/performance.sql) para garantir os indices de busca, paginacao e auth.
 6. Execute [`supabase/dashboard_rpc.sql`](./supabase/dashboard_rpc.sql) para reduzir as chamadas do dashboard admin.
-7. Execute [`supabase/update-cadastro-lideranca.sql`](./supabase/update-cadastro-lideranca.sql) para habilitar lideranca, cidades separadas e local de votacao opcional.
+7. Execute [`supabase/update-cadastro-lideranca.sql`](./supabase/update-cadastro-lideranca.sql) para habilitar lideranca, cidade de moradia e local de votacao opcional.
 8. Crie o usuario admin em `Authentication > Users`.
 9. Execute [`supabase/admin-example.sql`](./supabase/admin-example.sql) preenchendo o UUID e o e-mail corretos.
 10. Para diagnosticar producao, execute [`supabase/check-production.sql`](./supabase/check-production.sql).
@@ -135,7 +135,7 @@ Tabelas principais:
 O schema inclui indices para melhorar performance de:
 
 - paginacao por `criado_em`
-- filtro por `cidade`, `cidade_moradia`, `cidade_votacao` e `lideranca_slug`
+- filtro por `cidade`, `cidade_moradia` e `lideranca_slug`
 - busca por `nome_completo`
 - busca por `telefone_normalizado`
 - carregamento de apoios por `cadastro_id`
@@ -269,6 +269,7 @@ Mantenha `SUPABASE_SERVICE_ROLE_KEY` apenas no ambiente do servidor.
 ## Dominio e preview do WhatsApp
 
 As metatags Open Graph e Twitter Card apontam para `/og-image.png`.
+O favicon usa os arquivos `public/favicon.svg`, `public/favicon.ico` e `public/apple-touch-icon.png`, todos com tema Brasil.
 
 Para mudar o dominio na Vercel:
 

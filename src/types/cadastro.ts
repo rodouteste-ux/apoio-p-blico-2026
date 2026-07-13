@@ -14,7 +14,6 @@ export interface Cadastro {
   liderancaSlug?: string | null;
   cidade: string;
   cidadeMoradia: string;
-  cidadeVotacao?: string | null;
   bairro: string;
   ruaNumero: string;
   localVotacao?: string | null;

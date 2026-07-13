@@ -30,10 +30,6 @@ export function CadastroMobileCard({ cadastro }: { cadastro: Cadastro }) {
           <dd className="mt-0.5 text-foreground">{cadastro.liderancaNome}</dd>
         </div>
         <div>
-          <dt className="text-muted-foreground">Cidade onde vota</dt>
-          <dd className="mt-0.5 text-foreground">{cadastro.cidadeVotacao || "Nao informado"}</dd>
-        </div>
-        <div>
           <dt className="text-muted-foreground">Local de votacao</dt>
           <dd className="mt-0.5 text-foreground">{cadastro.localVotacao || "Nao informado"}</dd>
         </div>

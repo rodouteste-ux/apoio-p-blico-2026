@@ -33,7 +33,6 @@ const schema = z.object({
   nome: z.string().trim().min(3, "Nome completo obrigatorio"),
   liderancaNome: z.string().trim().min(3, "Lideranca obrigatoria"),
   cidadeMoradia: z.string().min(1, "Cidade onde mora obrigatoria"),
-  cidadeVotacao: z.string().optional(),
   bairro: z.string().trim().min(2, "Bairro obrigatorio"),
   ruaNumero: z.string().trim().min(3, "Rua e numero obrigatorios"),
   localVotacao: z.string().optional(),
@@ -75,7 +74,6 @@ function CadastroPage() {
       nome: "",
       liderancaNome: "",
       cidadeMoradia: "",
-      cidadeVotacao: "",
       bairro: "",
       ruaNumero: "",
       localVotacao: "",
@@ -253,16 +251,6 @@ function CadastroPage() {
               {...register("cidadeMoradia")}
               error={errors.cidadeMoradia?.message}
             />
-            <FormSelect
-              label="Cidade onde vota"
-              placeholder="Selecione a cidade, se for diferente"
-              options={cidades}
-              {...register("cidadeVotacao")}
-              error={errors.cidadeVotacao?.message}
-            />
-            <p className="-mt-2 text-xs text-muted-foreground">
-              Se voce mora em uma cidade, mas vota em outra, informe as duas.
-            </p>
             <FormInput
               label="Bairro / povoado"
               placeholder="Ex.: Centro"
@@ -277,10 +265,13 @@ function CadastroPage() {
             />
             <FormInput
               label="Local de votacao, se souber"
-              placeholder="Ex.: Escola Municipal..., Colegio..., nao sei"
+              placeholder="Ex.: Escola Municipal..., Colegio..., Zona/Secao, nao sei"
               {...register("localVotacao")}
               error={errors.localVotacao?.message}
             />
+            <p className="-mt-2 text-xs text-muted-foreground">
+              Se voce souber onde vota, informe aqui. Se nao souber, pode deixar em branco.
+            </p>
           </FormSection>
 
           <FormSection

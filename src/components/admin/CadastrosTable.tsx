@@ -11,14 +11,13 @@ interface CadastrosTableProps {
 export function CadastrosTable({ cadastros, compact }: CadastrosTableProps) {
   return (
     <div className="overflow-x-auto rounded-2xl border border-border bg-card">
-      <table className="w-full min-w-[1120px] text-sm">
+      <table className="w-full min-w-[980px] text-sm">
         <thead>
           <tr className="border-b border-border bg-muted/40">
             <Th>Nome</Th>
             {!compact && <Th>WhatsApp</Th>}
             <Th>Lideranca</Th>
             <Th>Cidade onde mora</Th>
-            {!compact && <Th>Cidade onde vota</Th>}
             {!compact && <Th>Bairro</Th>}
             {!compact && <Th>Local de votacao</Th>}
             <Th>Data</Th>
@@ -30,7 +29,7 @@ export function CadastrosTable({ cadastros, compact }: CadastrosTableProps) {
           {cadastros.length === 0 && (
             <tr>
               <td
-                colSpan={compact ? 4 : 10}
+                colSpan={compact ? 4 : 9}
                 className="px-4 py-8 text-center text-sm text-muted-foreground"
               >
                 Nenhum cadastro encontrado.
@@ -47,11 +46,6 @@ export function CadastrosTable({ cadastros, compact }: CadastrosTableProps) {
               {!compact && <td className="px-4 py-3 text-muted-foreground">{cadastro.telefone}</td>}
               <td className="px-4 py-3 text-muted-foreground">{cadastro.liderancaNome}</td>
               <td className="px-4 py-3 text-muted-foreground">{cadastro.cidadeMoradia}</td>
-              {!compact && (
-                <td className="px-4 py-3 text-muted-foreground">
-                  {cadastro.cidadeVotacao || "Nao informado"}
-                </td>
-              )}
               {!compact && <td className="px-4 py-3 text-muted-foreground">{cadastro.bairro}</td>}
               {!compact && (
                 <td className="px-4 py-3 text-muted-foreground">

@@ -137,7 +137,7 @@ async function loadUltimosCadastros(supabase: ReturnType<typeof getSupabaseServe
   try {
     return await supabase
       .from("cadastros_apoio")
-      .select("id, nome_completo, telefone, lideranca_nome, lideranca_slug, cidade, cidade_moradia, cidade_votacao, bairro, rua_numero, local_votacao, observacoes, criado_em")
+      .select("id, nome_completo, telefone, lideranca_nome, lideranca_slug, cidade, cidade_moradia, bairro, rua_numero, local_votacao, observacoes, criado_em")
       .order("criado_em", { ascending: false })
       .limit(5);
   } finally {
@@ -186,7 +186,6 @@ async function buildDashboardPayload() {
       lideranca_slug: item.lideranca_slug,
       cidade: item.cidade,
       cidade_moradia: item.cidade_moradia,
-      cidade_votacao: item.cidade_votacao,
       bairro: item.bairro,
       rua_numero: item.rua_numero,
       local_votacao: item.local_votacao,

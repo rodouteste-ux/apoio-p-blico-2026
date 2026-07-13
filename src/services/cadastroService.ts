@@ -9,7 +9,6 @@ export interface CadastroPayload {
   whatsapp: string;
   liderancaNome: string;
   cidadeMoradia: string;
-  cidadeVotacao?: string;
   bairro: string;
   ruaNumero: string;
   localVotacao?: string;
@@ -55,7 +54,6 @@ interface CadastroApiItem {
   lideranca_slug?: string | null;
   cidade?: string | null;
   cidade_moradia?: string | null;
-  cidade_votacao?: string | null;
   bairro: string;
   rua_numero: string;
   local_votacao?: string | null;
@@ -153,7 +151,6 @@ function mapCadastro(item: CadastroApiItem) {
     liderancaSlug: item.lideranca_slug,
     cidade: cidadeMoradia,
     cidadeMoradia,
-    cidadeVotacao: item.cidade_votacao || null,
     bairro: item.bairro,
     ruaNumero: item.rua_numero,
     localVotacao: item.local_votacao || null,
@@ -180,7 +177,6 @@ export function gerarSlugLideranca(nome: string) {
 
 export async function enviarCadastro(data: CadastroPayload) {
   const liderancaNome = data.liderancaNome.trim();
-  const cidadeVotacao = data.cidadeVotacao?.trim() || null;
   const localVotacao = data.localVotacao?.trim() || null;
 
   return apiRequest<{ success: true }>("/api/cadastros", {
@@ -191,7 +187,6 @@ export async function enviarCadastro(data: CadastroPayload) {
       lideranca_nome: liderancaNome,
       lideranca_slug: gerarSlugLideranca(liderancaNome),
       cidade_moradia: data.cidadeMoradia,
-      cidade_votacao: cidadeVotacao,
       bairro: data.bairro,
       rua_numero: data.ruaNumero,
       local_votacao: localVotacao,

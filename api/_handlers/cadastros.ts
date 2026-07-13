@@ -12,7 +12,6 @@ const cadastroSchema = z.object({
   lideranca_nome: z.string().trim().min(3),
   lideranca_slug: z.string().trim().optional().or(z.literal("")),
   cidade_moradia: z.string().trim().min(1),
-  cidade_votacao: z.string().trim().optional().nullable().or(z.literal("")),
   bairro: z.string().trim().min(2),
   rua_numero: z.string().trim().min(3),
   local_votacao: z.string().trim().optional().nullable().or(z.literal("")),
@@ -60,7 +59,6 @@ export default async function handler(req: any, res: any) {
     const liderancaNome = body.lideranca_nome.trim();
     const liderancaSlug = body.lideranca_slug?.trim() || gerarSlugLideranca(liderancaNome);
     const cidadeMoradia = body.cidade_moradia.trim();
-    const cidadeVotacao = body.cidade_votacao?.trim() || null;
     const localVotacao = body.local_votacao?.trim() || null;
 
     if (telefoneNormalizado.length < 10 || !liderancaSlug) {
@@ -126,7 +124,6 @@ export default async function handler(req: any, res: any) {
         lideranca_slug: liderancaSlug,
         cidade: cidadeMoradia,
         cidade_moradia: cidadeMoradia,
-        cidade_votacao: cidadeVotacao,
         bairro: body.bairro,
         rua_numero: body.rua_numero,
         local_votacao: localVotacao,
