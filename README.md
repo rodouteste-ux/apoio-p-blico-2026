@@ -1,6 +1,6 @@
 # Pre-campanha 2026 - Cadastro de Apoio
 
-Aplicacao front-end criada com Lovable e integrada com Supabase no banco e Vercel API Routes no backend.
+Aplicacao front-end integrada com Supabase no banco e Vercel API Routes no backend.
 
 ## Stack
 
@@ -268,7 +268,7 @@ Mantenha `SUPABASE_SERVICE_ROLE_KEY` apenas no ambiente do servidor.
 
 ## Dominio e preview do WhatsApp
 
-As metatags Open Graph e Twitter Card apontam para `/og-image.png`.
+As metatags Open Graph e Twitter Card apontam para `https://apoio-p-blico-2026-two.vercel.app/og-image.png`.
 O favicon usa os arquivos `public/favicon.svg`, `public/favicon.ico` e `public/apple-touch-icon.png`, todos com tema Brasil.
 
 Para mudar o dominio na Vercel:
@@ -281,7 +281,7 @@ Para mudar o dominio na Vercel:
 
 O nome do projeto pode ser ajustado em Vercel > Project Settings > General > Project Name.
 O dominio `.vercel.app` depende de disponibilidade; para uma apresentacao mais profissional, use um dominio comprado.
-O WhatsApp pode manter preview antigo em cache por algum tempo, entao teste com um link novo ou aguarde a atualizacao do cache.
+O WhatsApp pode manter preview antigo em cache por algum tempo. Para testar a atualizacao, envie `https://apoio-p-blico-2026-two.vercel.app/?v=2` ou aguarde o cache atualizar.
 
 Cuidados importantes:
 

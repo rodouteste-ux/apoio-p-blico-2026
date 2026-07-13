@@ -7,10 +7,14 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
-import { reportLovableError } from "../lib/lovable-error-reporting";
+
+const SITE_URL = "https://apoio-p-blico-2026-two.vercel.app/";
+const SITE_TITLE = "Pré-campanha 2026 — Cadastro de Apoio";
+const SITE_DESCRIPTION = "Cadastre seu apoio e participe da pré-campanha 2026.";
+const OG_IMAGE_URL = `${SITE_URL}og-image.png`;
 
 function NotFoundComponent() {
   return (
@@ -37,9 +41,6 @@ function NotFoundComponent() {
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   console.error(error);
   const router = useRouter();
-  useEffect(() => {
-    reportLovableError(error, { boundary: "tanstack_root_error_component" });
-  }, [error]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -77,17 +78,22 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Pré-campanha 2026 — Cadastro de Apoio" },
-      { name: "description", content: "Cadastre seu apoio e participe da pré-campanha 2026." },
-      { property: "og:title", content: "Pré-campanha 2026 — Cadastro de Apoio" },
-      { property: "og:description", content: "Cadastre seu apoio e participe da pré-campanha 2026." },
+      { title: SITE_TITLE },
+      { name: "description", content: SITE_DESCRIPTION },
+      { property: "og:title", content: SITE_TITLE },
+      { property: "og:description", content: SITE_DESCRIPTION },
       { property: "og:type", content: "website" },
-      { property: "og:url", content: "/" },
-      { property: "og:image", content: "/og-image.png" },
+      { property: "og:site_name", content: "Pré-campanha 2026" },
+      { property: "og:url", content: SITE_URL },
+      { property: "og:image", content: OG_IMAGE_URL },
+      { property: "og:image:secure_url", content: OG_IMAGE_URL },
+      { property: "og:image:type", content: "image/png" },
+      { property: "og:image:width", content: "1200" },
+      { property: "og:image:height", content: "630" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: "Pré-campanha 2026 — Cadastro de Apoio" },
-      { name: "twitter:description", content: "Cadastre seu apoio e participe da pré-campanha 2026." },
-      { name: "twitter:image", content: "/og-image.png" },
+      { name: "twitter:title", content: SITE_TITLE },
+      { name: "twitter:description", content: SITE_DESCRIPTION },
+      { name: "twitter:image", content: OG_IMAGE_URL },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
