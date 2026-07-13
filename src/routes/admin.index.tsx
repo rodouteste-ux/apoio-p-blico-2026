@@ -78,7 +78,7 @@ function AdminDashboard() {
     <AppLayout maxWidth="xl">
       <AdminHeader />
 
-      <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-7">
+      <section className="grid grid-cols-1 gap-3 min-[360px]:grid-cols-2 sm:grid-cols-3 sm:gap-4 lg:grid-cols-7">
         <MetricCard label="Total de cadastros" value={dashboard?.totalCadastros ?? "—"} icon={Users} />
         <MetricCard label="Cadastros hoje" value={dashboard?.cadastrosHoje ?? "—"} icon={TrendingUp} />
         <MetricCard label="Cidades" value={dashboard?.totalCidades ?? "—"} icon={MapPin} />
@@ -131,7 +131,7 @@ function AdminDashboard() {
       </div>
 
       <section className="mt-6 rounded-2xl border border-border bg-card p-4 sm:p-6">
-        <div className="mb-4 flex items-center justify-between gap-3">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-base font-semibold text-foreground">Ultimos cadastros</h2>
           <Link
             to="/admin/cadastros"
@@ -190,7 +190,7 @@ function PanelMessage({
         <button
           type="button"
           onClick={onRetry}
-          className="mt-4 inline-flex h-10 items-center justify-center rounded-lg border border-border bg-white px-4 text-sm font-medium text-foreground transition hover:border-primary/40 hover:bg-accent"
+          className="mt-4 inline-flex min-h-11 items-center justify-center rounded-lg border border-border bg-white px-4 py-2.5 text-sm font-medium text-foreground transition hover:border-primary/40 hover:bg-accent"
         >
           Tentar novamente
         </button>

@@ -13,7 +13,7 @@ export function CandidateCard({ candidato, selected, onToggle }: CandidateCardPr
       type="button"
       onClick={() => onToggle(candidato.id)}
       aria-pressed={selected}
-      className={`group flex w-full items-center gap-3 rounded-xl border p-3.5 text-left transition ${
+      className={`group flex min-h-16 w-full items-center gap-3 rounded-xl border p-4 text-left transition ${
         selected
           ? "border-primary bg-accent shadow-[0_0_0_3px_rgba(15,118,110,0.08)]"
           : "border-border bg-white hover:border-primary/40 hover:bg-accent/40"
@@ -29,10 +29,10 @@ export function CandidateCard({ candidato, selected, onToggle }: CandidateCardPr
         <Check className="h-4 w-4" strokeWidth={3} />
       </span>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-semibold text-foreground">
+        <p className="text-sm font-semibold leading-snug text-foreground">
           {candidato.nome}
         </p>
-        <p className="mt-0.5 text-xs text-muted-foreground">{candidato.cargo}</p>
+        <p className="mt-0.5 text-xs leading-snug text-muted-foreground">{candidato.cargo}</p>
       </div>
     </button>
   );

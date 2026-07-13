@@ -14,7 +14,7 @@ export const FormSelect = forwardRef<HTMLSelectElement, FormSelectProps>(
       <div className="grid gap-1.5">
         <label
           htmlFor={selectId}
-          className="text-xs font-medium uppercase tracking-wide text-muted-foreground"
+          className="text-sm font-medium text-muted-foreground"
         >
           {label}
         </label>
@@ -23,7 +23,7 @@ export const FormSelect = forwardRef<HTMLSelectElement, FormSelectProps>(
             id={selectId}
             ref={ref}
             {...props}
-            className={`h-11 w-full appearance-none rounded-lg border bg-white px-3.5 pr-10 text-[15px] text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15 ${
+            className={`min-h-12 w-full appearance-none rounded-lg border bg-white px-4 py-3 pr-10 text-base text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15 ${
               error ? "border-destructive focus:border-destructive focus:ring-destructive/15" : "border-border"
             } ${className ?? ""}`}
           >
@@ -50,7 +50,7 @@ export const FormSelect = forwardRef<HTMLSelectElement, FormSelectProps>(
             />
           </svg>
         </div>
-        {error && <p className="text-xs text-destructive">{error}</p>}
+        {error && <p className="text-sm text-destructive">{error}</p>}
       </div>
     );
   },

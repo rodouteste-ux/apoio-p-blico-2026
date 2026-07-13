@@ -189,7 +189,7 @@ function CadastroPage() {
         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">
           Sistema
         </p>
-        <h1 className="mt-1 text-xl font-bold tracking-tight text-foreground sm:text-2xl">
+        <h1 className="mt-1 text-2xl font-bold leading-tight tracking-tight text-foreground sm:text-3xl">
           Pre-campanha 2026
         </h1>
         <p className="text-sm text-muted-foreground">Cadastro de Apoio</p>
@@ -197,12 +197,12 @@ function CadastroPage() {
 
       <form
         onSubmit={handleSubmit(onSubmit)}
-        className="rounded-2xl border border-border bg-card p-5 shadow-[0_1px_0_rgba(15,23,42,0.03)] sm:p-7"
+        className="rounded-2xl border border-border bg-card p-4 shadow-[0_1px_0_rgba(15,23,42,0.03)] sm:p-7"
         noValidate
       >
         <div className="mb-6">
-          <h2 className="text-lg font-semibold text-foreground">Dados do apoiador</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <h2 className="text-lg font-semibold leading-tight text-foreground">Dados do apoiador</h2>
+          <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
             Preencha as informacoes abaixo para registrar seu apoio.
           </p>
         </div>
@@ -238,7 +238,7 @@ function CadastroPage() {
               {...register("liderancaNome")}
               error={errors.liderancaNome?.message}
             />
-            <p className="-mt-2 text-xs text-muted-foreground">
+            <p className="-mt-2 text-sm leading-relaxed text-muted-foreground">
               Ex: Joao Silva, Maria Santos, lideranca do bairro...
             </p>
           </FormSection>
@@ -248,18 +248,21 @@ function CadastroPage() {
               label="Cidade onde mora"
               placeholder="Selecione a cidade"
               options={cidades}
+              autoComplete="address-level2"
               {...register("cidadeMoradia")}
               error={errors.cidadeMoradia?.message}
             />
             <FormInput
               label="Bairro / povoado"
               placeholder="Ex.: Centro"
+              autoComplete="address-level3"
               {...register("bairro")}
               error={errors.bairro?.message}
             />
             <FormInput
               label="Rua e numero"
               placeholder="Ex.: Rua das Flores, 123"
+              autoComplete="street-address"
               {...register("ruaNumero")}
               error={errors.ruaNumero?.message}
             />
@@ -269,7 +272,7 @@ function CadastroPage() {
               {...register("localVotacao")}
               error={errors.localVotacao?.message}
             />
-            <p className="-mt-2 text-xs text-muted-foreground">
+            <p className="-mt-2 text-sm leading-relaxed text-muted-foreground">
               Se voce souber onde vota, informe aqui. Se nao souber, pode deixar em branco.
             </p>
           </FormSection>
@@ -369,7 +372,7 @@ function StatusCard({
         <button
           type="button"
           onClick={onRetry}
-          className="mt-4 inline-flex h-10 items-center justify-center rounded-lg border border-border bg-white px-4 text-sm font-medium text-foreground transition hover:border-primary/40 hover:bg-accent"
+          className="mt-4 inline-flex min-h-11 items-center justify-center rounded-lg border border-border bg-white px-4 py-2.5 text-sm font-medium text-foreground transition hover:border-primary/40 hover:bg-accent"
         >
           Tentar novamente
         </button>

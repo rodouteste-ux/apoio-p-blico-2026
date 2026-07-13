@@ -38,8 +38,8 @@ export function ApoiosChart({ data }: ApoiosChartProps) {
           <div key={item.id}>
             <div className="flex items-baseline justify-between gap-3">
               <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-foreground">{item.nome}</p>
-                <p className="truncate text-[11px] text-muted-foreground">{item.cargo}</p>
+                <p className="break-words text-sm font-medium leading-snug text-foreground">{item.nome}</p>
+                <p className="break-words text-[11px] leading-snug text-muted-foreground">{item.cargo}</p>
               </div>
               <span className="shrink-0 text-sm font-semibold tabular-nums text-foreground">
                 {item.apoios}

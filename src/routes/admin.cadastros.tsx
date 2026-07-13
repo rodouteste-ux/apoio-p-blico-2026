@@ -136,9 +136,9 @@ function AdminCadastros() {
         </Link>
       </div>
 
-      <header className="mb-5 grid grid-cols-[minmax(0,1fr)_auto] items-end gap-3 sm:flex sm:items-center sm:justify-between">
+      <header className="mb-5 grid gap-3 sm:flex sm:items-center sm:justify-between">
         <div className="min-w-0">
-          <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+          <h1 className="text-2xl font-bold leading-tight tracking-tight text-foreground sm:text-3xl">
             Cadastros
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -154,7 +154,7 @@ function AdminCadastros() {
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Buscar por nome ou WhatsApp"
-            className="h-11 w-full rounded-lg border border-border bg-white pl-10 pr-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15"
+            className="min-h-12 w-full rounded-lg border border-border bg-white py-3 pl-10 pr-3 text-base outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15"
           />
         </div>
         <select
@@ -163,7 +163,7 @@ function AdminCadastros() {
             setCidadeFilter(event.target.value);
             setPage(1);
           }}
-          className="h-11 rounded-lg border border-border bg-white px-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15"
+          className="min-h-12 rounded-lg border border-border bg-white px-3 py-3 text-base outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15"
         >
           {cidades.map((cidade) => (
             <option key={cidade} value={cidade}>
@@ -177,7 +177,7 @@ function AdminCadastros() {
             setLiderancaFilter(event.target.value);
             setPage(1);
           }}
-          className="h-11 rounded-lg border border-border bg-white px-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15"
+          className="min-h-12 rounded-lg border border-border bg-white px-3 py-3 text-base outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15"
         >
           <option value="todas">Todas as liderancas</option>
           {liderancas.map((lideranca) => (
@@ -192,7 +192,7 @@ function AdminCadastros() {
         <p className="rounded-2xl border border-border bg-card px-4 py-3 text-sm text-muted-foreground">
           Total de cadastros filtrados: <span className="font-semibold text-foreground">{total}</span>
         </p>
-        <section className="rounded-2xl border border-border bg-card p-4">
+        <section className="min-w-0 rounded-2xl border border-border bg-card p-4">
           <h2 className="text-sm font-semibold text-foreground">Cadastros por lideranca</h2>
           <div className="mt-3 grid gap-2 text-sm">
             {rankingLiderancas.length === 0 && (
@@ -200,7 +200,7 @@ function AdminCadastros() {
             )}
             {rankingLiderancas.map((item) => (
               <div key={item.nome} className="flex items-center justify-between gap-3">
-                <span className="truncate text-muted-foreground">{item.nome}</span>
+                <span className="min-w-0 break-words text-muted-foreground">{item.nome}</span>
                 <span className="font-semibold text-foreground">{item.total}</span>
               </div>
             ))}
@@ -240,11 +240,11 @@ function AdminCadastros() {
       )}
 
       {!error && !loading && totalPages > 1 && (
-        <div className="mt-6 flex items-center justify-between gap-3 rounded-2xl border border-border bg-card px-4 py-3">
+        <div className="mt-6 grid gap-3 rounded-2xl border border-border bg-card px-4 py-3 sm:flex sm:items-center sm:justify-between">
           <p className="text-sm text-muted-foreground">
             Pagina {page} de {totalPages}
           </p>
-          <div className="flex gap-2">
+          <div className="grid grid-cols-2 gap-2 sm:flex">
             <Button
               type="button"
               variant="outline"

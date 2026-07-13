@@ -195,13 +195,13 @@ function AdminPreCandidatosPage() {
 
       <section className="rounded-2xl border border-border bg-card p-4 shadow-[0_1px_0_rgba(15,23,42,0.03)] sm:p-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 className="text-xl font-semibold text-foreground">Gerenciar pre-candidatos</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
+          <div className="min-w-0">
+            <h2 className="text-xl font-semibold leading-tight text-foreground">Gerenciar pre-candidatos</h2>
+            <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
               Cadastre, edite, ordene e ative ou desative os nomes exibidos no formulario publico.
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="grid w-full gap-2 min-[420px]:grid-cols-2 sm:w-auto sm:flex">
             <Button type="button" variant="outline" disabled={loading} onClick={() => void loadItems()}>
               <RefreshCw className="h-4 w-4" />
               {loading ? "Atualizando..." : "Atualizar"}
@@ -260,7 +260,7 @@ function AdminPreCandidatosPage() {
                           min={0}
                           defaultValue={item.ordem}
                           onBlur={(event) => void handleOrdemBlur(item, Number(event.target.value))}
-                          className="h-9 w-20 rounded-md border border-border bg-white px-3 text-sm"
+                        className="min-h-11 w-20 rounded-md border border-border bg-white px-3 text-base"
                         />
                       </td>
                       <td className="px-4 py-3 font-medium text-foreground">{item.nome}</td>
@@ -302,18 +302,18 @@ function AdminPreCandidatosPage() {
 
             <div className="mt-6 grid gap-3 sm:hidden">
               {items.map((item) => (
-                <article key={item.id} className="rounded-2xl border border-border bg-card p-4">
+                <article key={item.id} className="min-w-0 rounded-2xl border border-border bg-card p-4">
                   <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <h3 className="text-base font-semibold text-foreground">{item.nome}</h3>
-                      <p className="text-sm text-muted-foreground">{item.cargo}</p>
+                    <div className="min-w-0">
+                      <h3 className="break-words text-base font-semibold leading-snug text-foreground">{item.nome}</h3>
+                      <p className="mt-0.5 break-words text-sm leading-relaxed text-muted-foreground">{item.cargo}</p>
                     </div>
                     <span className="rounded-full bg-accent px-2.5 py-1 text-[11px] font-medium text-primary">
                       #{item.ordem}
                     </span>
                   </div>
-                  <div className="mt-3 flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground">
+                  <div className="mt-3 grid gap-2 min-[380px]:flex min-[380px]:items-center min-[380px]:justify-between">
+                    <span className="text-sm text-muted-foreground">
                       {item.ativo ? "Visivel no formulario" : "Oculto do formulario"}
                     </span>
                     <Button
@@ -330,18 +330,18 @@ function AdminPreCandidatosPage() {
                           : "Ativar"}
                     </Button>
                   </div>
-                  <div className="mt-3 flex gap-2">
+                  <div className="mt-3 grid gap-2 min-[380px]:grid-cols-[auto_1fr] min-[380px]:items-center">
                     <Button type="button" variant="outline" size="sm" onClick={() => openEditModal(item)}>
                       Editar
                     </Button>
-                    <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <label className="flex min-h-10 items-center gap-2 text-sm text-muted-foreground">
                       Ordem
                       <input
                         type="number"
                         min={0}
                         defaultValue={item.ordem}
                         onBlur={(event) => void handleOrdemBlur(item, Number(event.target.value))}
-                        className="h-8 w-16 rounded-md border border-border bg-white px-2 text-sm"
+                        className="min-h-10 w-20 rounded-md border border-border bg-white px-2 text-base"
                       />
                     </label>
                   </div>
@@ -367,7 +367,7 @@ function AdminPreCandidatosPage() {
               <input
                 value={form.nome}
                 onChange={(event) => setForm((current) => ({ ...current, nome: event.target.value }))}
-                className="h-11 rounded-lg border border-border bg-white px-3 text-sm"
+                className="min-h-12 rounded-lg border border-border bg-white px-4 py-3 text-base"
                 required
               />
             </label>
@@ -377,7 +377,7 @@ function AdminPreCandidatosPage() {
               <input
                 value={form.cargo}
                 onChange={(event) => setForm((current) => ({ ...current, cargo: event.target.value }))}
-                className="h-11 rounded-lg border border-border bg-white px-3 text-sm"
+                className="min-h-12 rounded-lg border border-border bg-white px-4 py-3 text-base"
                 required
               />
             </label>
@@ -392,12 +392,12 @@ function AdminPreCandidatosPage() {
                   onChange={(event) =>
                     setForm((current) => ({ ...current, ordem: Number(event.target.value) }))
                   }
-                  className="h-11 rounded-lg border border-border bg-white px-3 text-sm"
+                  className="min-h-12 rounded-lg border border-border bg-white px-4 py-3 text-base"
                   required
                 />
               </label>
 
-              <label className="flex items-center gap-2 rounded-lg border border-border px-3 py-3 text-sm">
+              <label className="flex min-h-12 items-center gap-2 rounded-lg border border-border px-3 py-3 text-sm">
                 <input
                   type="checkbox"
                   checked={form.ativo}

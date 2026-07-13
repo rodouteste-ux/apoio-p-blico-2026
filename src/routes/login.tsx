@@ -57,12 +57,12 @@ function LoginPage() {
 
   return (
     <AppLayout maxWidth="sm">
-      <div className="rounded-2xl border border-border bg-card p-6 shadow-[0_1px_0_rgba(15,23,42,0.03)] sm:p-8">
+      <div className="rounded-2xl border border-border bg-card p-5 shadow-[0_1px_0_rgba(15,23,42,0.03)] sm:p-8">
         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">Admin</p>
-        <h1 className="mt-2 text-2xl font-bold tracking-tight text-foreground">
+        <h1 className="mt-2 text-2xl font-bold leading-tight tracking-tight text-foreground sm:text-3xl">
           Acesso administrativo
         </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
+        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
           Entre com seu usuario do Supabase Auth para acessar o painel.
         </p>
 
@@ -86,7 +86,7 @@ function LoginPage() {
               autoComplete="email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
-              className="h-11 rounded-lg border border-border bg-white px-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15"
+              className="min-h-12 rounded-lg border border-border bg-white px-4 py-3 text-base outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15"
               placeholder="admin@exemplo.com"
               required
             />
@@ -99,7 +99,7 @@ function LoginPage() {
               autoComplete="current-password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              className="h-11 rounded-lg border border-border bg-white px-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15"
+              className="min-h-12 rounded-lg border border-border bg-white px-4 py-3 text-base outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15"
               placeholder="Sua senha"
               required
             />
