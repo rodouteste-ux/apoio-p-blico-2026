@@ -268,7 +268,7 @@ Mantenha `SUPABASE_SERVICE_ROLE_KEY` apenas no ambiente do servidor.
 
 ## Dominio e preview do WhatsApp
 
-As metatags Open Graph e Twitter Card apontam para `https://cadastro-apoio-2026.vercel.app/og-image.png`.
+As metatags Open Graph e Twitter Card apontam para `https://cadastro-pre-campanha-2026.vercel.app/og-image.png`.
 O favicon usa os arquivos `public/favicon.svg`, `public/favicon.ico` e `public/apple-touch-icon.png`, todos com tema Brasil.
 
 Para mudar o dominio na Vercel:
@@ -281,7 +281,7 @@ Para mudar o dominio na Vercel:
 
 O nome do projeto pode ser ajustado em Vercel > Project Settings > General > Project Name.
 O dominio `.vercel.app` depende de disponibilidade; para uma apresentacao mais profissional, use um dominio comprado.
-O WhatsApp pode manter preview antigo em cache por algum tempo. Para testar a atualizacao, envie `https://cadastro-apoio-2026.vercel.app/?v=3` ou aguarde o cache atualizar.
+O WhatsApp pode manter preview antigo em cache por algum tempo. Para testar a atualizacao, envie `https://cadastro-pre-campanha-2026.vercel.app/?v=6` ou aguarde o cache atualizar.
 
 Cuidados importantes:
 

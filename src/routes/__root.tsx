@@ -11,7 +11,7 @@ import { type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 
-const SITE_URL = "https://cadastro-apoio-2026.vercel.app/";
+const SITE_URL = "https://cadastro-pre-campanha-2026.vercel.app/";
 const SITE_TITLE = "Pré-campanha 2026 — Cadastro de Apoio";
 const SITE_DESCRIPTION = "Cadastre seu apoio e participe da pré-campanha 2026.";
 const OG_IMAGE_URL = `${SITE_URL}og-image.png`;
